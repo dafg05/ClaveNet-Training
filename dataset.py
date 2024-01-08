@@ -1,9 +1,10 @@
-from constants import *
 import numpy as np
 import pickle
 import wandb
 import pandas as pd
 from torch.utils.data import Dataset
+
+PROCESSED_DATA_DIR = "processedData"
 
 class GrooveHVODataset(Dataset):
     def __init__(self, hvo_path, transform=None, target_transform=None):
@@ -23,13 +24,10 @@ class GrooveHVODataset(Dataset):
             monotonic_hvo = self.transform(monotonic_hvo)
         if self.target_transform:
             target_hvo = self.target_transform(target_hvo) 
-        # print(monotonic_hvo.shape, target_hvo.shape)
         if monotonic_hvo.shape[0] != 32:
-            print("monotonic_hvo.shape:", monotonic_hvo.shape)
-            print("idx:", idx)
+            raise ValueError(f"Monotonic hvo shape is not 32. monotic_hvo.shape: {monotonic_hvo.shape}, idx: {idx}")
         if target_hvo.shape[0] != 32:
-            print("target_hvo.shape:", target_hvo.shape)
-            print("idx:", idx)
+            raise ValueError(f"Target hvo shape is not 32. target_hvo.shape: {target_hvo.shape}, idx: {idx}")
         return monotonic_hvo, target_hvo
     
     def get_hvo_pairs(self, hvo_path) -> pd.DataFrame:

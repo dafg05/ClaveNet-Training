@@ -34,7 +34,11 @@ class HVO_Loss(nn.Module):
         offsets_loss = torch.mul(penalty_tensor, offsets_loss)
 
         # return mean of all losses
-        return torch.mean(hits_loss) + torch.mean(velocities_loss) + torch.mean(offsets_loss)
+        return {
+            "hits_loss": torch.mean(hits_loss),
+            "velocities_loss": torch.mean(velocities_loss),
+            "offsets_loss": torch.mean(offsets_loss)
+        }
     
     def getPenaltyTensor(self, target_hits):
         return torch.where(target_hits == 1.0, 1.0, self.penalty)
