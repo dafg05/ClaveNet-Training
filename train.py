@@ -16,9 +16,7 @@ MODEL_DIMENSION = 512
 PITCHES = 9
 TIME_STEPS = 32
 
-LOG_EVERY = 32
-log_wandb = False
-smol = True
+LOG_EVERY = 64
 
 # TRAINING AND TESTING LOOPS
 
@@ -27,7 +25,7 @@ def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch):
     From pytorch tutorial: https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
     """
     model.train() # Set the model to training mode - important for batch normalization and dropout layers
-    with torch.autograd.detect_anomaly(True):
+    with torch.autograd.detect_anomaly():
         for batch, (x, y) in enumerate(dataloader):
             if not (is_valid_hvo(x) and is_valid_hvo(y)):
                 raise Exception("Invalid training data! x or y contains nans or infs!")
