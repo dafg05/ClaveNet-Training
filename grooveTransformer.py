@@ -12,6 +12,15 @@ class GrooveTransformerModel(nn.Module):
         """
         super(GrooveTransformerModel, self).__init__()
 
+        device = (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
+        print(f"Using {device} device")
+
         # hvo dimensions
         self.pitches = pitches
         self.time_steps = time_steps
@@ -81,7 +90,6 @@ class PositionalEncoding(nn.Module):
         
 if __name__ == "__main__":
 
-    # test that the shape of the output is correct: aka that it matches the input
     device = (
         "cuda"
         if torch.cuda.is_available()
