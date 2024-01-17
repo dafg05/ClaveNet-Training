@@ -7,6 +7,7 @@ from hvoLoss import HVO_Loss
 from dataset import GrooveHVODataset
 from grooveTransformer import GrooveTransformerModel
 from torch.utils.data import DataLoader
+from utils import ndarray_to_tensor, is_valid_hvo
 
 MODELS_DIR = "models"
 SMOL_DATA_DIR = "testData"
@@ -56,7 +57,7 @@ def test_loop(dataloader, model, loss_fn, epoch):
     hit_accuracy <- correctly_predicted_hits / total_hits
 
     TODO:
-    - test hit accuracy with different batch sizes and numbers of batches
+    - make hit accuracy its own function, and test it
     """
     
     model.eval() # Set the model to evaluation mode - important for batch normalization and dropout layers
@@ -147,15 +148,6 @@ def test_logging(logWandb, test_loss, hit_accuracy, epoch):
         print(f"hit_accuracy: {hit_accuracy:>7f} epoch: {epoch:>7f}")
         print("-----------------------------------")
 
-def ndarray_to_tensor(array: np.ndarray) -> torch.Tensor:
-    return torch.from_numpy(array, ).float()
-
-def is_valid_hvo(hvo: np.ndarray) -> bool:
-    """
-    Check for nans and infs in hvo
-    """
-    return (torch.isnan(hvo).any() == False) and (torch.isinf(hvo).any() == False)
-
 # USAGE
 
 def usage():
@@ -192,7 +184,6 @@ if __name__ == "__main__":
     batch_size = 4 if smol else 64
     epochs = 2 if smol else 100
     d_model = 8 if smol else 512 
-    d_model = 8
     n_head = 4
     num_layers = 6
     loss_penalty = 0.1 # applied to velocites and offset values that occur in non-hit locations
