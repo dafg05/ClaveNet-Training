@@ -6,3 +6,7 @@ wandb
 learningVenv
 models/*
 processedData/*
+out/*
+midi/inferred/*
+midi/monotonic/*
+midi/source/*

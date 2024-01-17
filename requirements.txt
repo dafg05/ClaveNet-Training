@@ -2,3 +2,4 @@ numpy
 wandb
 pandas
 torch
+pyfluidsynth
