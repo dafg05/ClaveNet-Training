@@ -1,0 +1,12 @@
+{
+    "batch_size" : 16,
+    "d_model" : 128,
+    "dim_forward" : 16,
+    "n_heads" : 4,
+    "n_layers" : 11,
+    "dropout" : 0.1594,
+    "learning_rate": 0.037,
+    "loss_penalty" : 0.497,
+    "grad_clip" : 100.0,
+    "data_augmentation" : false
+}

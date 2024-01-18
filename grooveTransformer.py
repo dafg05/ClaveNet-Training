@@ -4,12 +4,7 @@ import math
 import numpy as np
 
 class GrooveTransformerModel(nn.Module):
-    def __init__(self, d_model=512, nhead=4, num_layers=6, pitches = 9, time_steps = 32):
-        """
-        TODO
-        - Add docstring
-        - Add feedworward size hyperparameter
-        """
+    def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32):
         super(GrooveTransformerModel, self).__init__()
 
         device = (
@@ -29,7 +24,7 @@ class GrooveTransformerModel(nn.Module):
         self.linear1 = nn.Linear(3 * self.pitches, d_model)
         self.relu = nn.ReLU()
         self.pos_encoder = PositionalEncoding(d_model=d_model)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
         self.linear2 = nn.Linear(d_model, 3 * self.pitches)
         self.sig = nn.Sigmoid()

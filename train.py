@@ -1,6 +1,8 @@
 import torch
 import wandb
 import sys
+import os
+import json
 import numpy as np
 
 from hvoLoss import HVO_Loss
@@ -11,14 +13,16 @@ from datetime import datetime
 from utils import ndarray_to_tensor, is_valid_hvo
 
 MODELS_DIR = "models"
+HYPERS_DIR = "hypers"
 SMOL_DATA_DIR = "testData"
 PROCESSED_DATA_DIR = "processedData"
 
 MODEL_DIMENSION = 512
 PITCHES = 9
 TIME_STEPS = 32
+TORCH_SEED = 0
 
-LOG_EVERY = 64
+LOG_EVERY = 1
 DEBUG = False
 
 # TRAINING AND TESTING LOOPS
@@ -102,16 +106,18 @@ def wandb_init():
         # Track hyperparameters and run metadata
         config={
         "torch_seed": torch_seed,
-        "learning_rate": learning_rate,
-        "grad_clip": grad_clip,
-        "batch_size": batch_size,
         "epochs": epochs,
-        "d_model": d_model,
-        "n_head": n_head,
-        "num_layers": num_layers,
-        "loss_penalty": loss_penalty,
         "traning_data_size": len(train_loader.dataset),
         "test_data_size": len(test_loader.dataset),
+        "batch_size": batch_size,
+        "d_model": d_model,
+        "dim_forward": dim_forward,
+        "n_heads": n_heads,
+        "n_layers": n_layers,
+        "dropout": dropout,
+        "learning_rate": learning_rate,
+        "loss_penalty": loss_penalty,
+        "grad_clip": grad_clip,    
         "data_augmentation": data_augmentation
     })
 
@@ -154,16 +160,18 @@ def test_logging(logWandb, test_loss, hit_accuracy, epoch):
 # USAGE
 
 def usage():
-    print("Usage: python train.py <size> <log_location> [data_aug]")
+    print("Usage: python train.py <size> <log_location> <paramFileName")
     print("smol: 'smol' or 'full'")
     print("log_location: 'wandb' or 'local'")
-    print("data_aug: 'aug'")
+    print("paramFilename: 'file name that contains hyperparameters")
+
+
 
 # MAIN
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         usage()
         sys.exit(1)
     if sys.argv[1] == "smol":
@@ -173,6 +181,7 @@ if __name__ == "__main__":
     else:
         usage()
         sys.exit(1)
+
     if sys.argv[2] == "wandb":
         log_wandb = True
     elif sys.argv[2] == "local":
@@ -181,25 +190,28 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    aug = False
-    if len(sys.argv) > 3:
-        if sys.argv[3] == "aug":
-            aug = True
-        else:
-            usage()
-            sys.exit(1)
+    hypersPath = f"{HYPERS_DIR}/{sys.argv[3]}"
+    if not os.path.exists(hypersPath):
+        print(f"Error: {hypersPath} does not exist!")
+        sys.exit(1)
 
-    # hyperparameters
-    torch_seed = 0
-    learning_rate = 1e-3
-    grad_clip = 5.0
-    batch_size = 4 if smol else 64
-    epochs = 2 if smol else 100
-    d_model = 8 if smol else 512 
-    n_head = 4
-    num_layers = 6
-    loss_penalty = 0.1 # applied to velocites and offset values that occur in non-hit locations
-    data_augmentation = aug
+    torch_seed = TORCH_SEED
+    epochs = 2 if smol else 50
+    # load hyperparameters
+    with open(hypersPath) as hp:
+        hypersDict = json.load(hp)
+
+
+    batch_size = hypersDict["batch_size"]
+    d_model = 8 if smol else hypersDict["d_model"]
+    dim_forward = hypersDict["dim_forward"]
+    n_heads = hypersDict["n_heads"]
+    n_layers = hypersDict["n_layers"]
+    dropout = hypersDict["dropout"]
+    learning_rate = hypersDict["learning_rate"]
+    loss_penalty = hypersDict["loss_penalty"] # applied to velocites and offset values that occur in non-hit locations
+    grad_clip = hypersDict["grad_clip"]
+    data_augmentation = hypersDict["data_augmentation"]
 
     # torch options
     torch.manual_seed(torch_seed)
@@ -231,7 +243,7 @@ if __name__ == "__main__":
         wandb_init()
 
     # init
-    model = GrooveTransformerModel(d_model=d_model, nhead=n_head, num_layers=num_layers)
+    model = GrooveTransformerModel(d_model=d_model, nhead=n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout)
     loss_fn = HVO_Loss(penalty=loss_penalty)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
