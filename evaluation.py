@@ -5,8 +5,8 @@ import mido
 
 from hvo_processing import tools
 from midiUtils import utils as mu
+from midiUtils.synthesize import synthesize_all
 from grooveTransformer import GrooveTransformerModel as GT
-from synthesize import synthesize_all
 
 OUT_DIR = "out"
 AUDIO_DIR = OUT_DIR + "/audio"
@@ -52,9 +52,10 @@ def runInferenceOnMonotonicMidi(model: GT, monotonicMidiPath: str, outPath: str)
 
 def loadModelForInference(modelPath: str) -> GT:
     """
+    # TODO: load model with parameters
     Loads a model and sets it to eval mode
     """
-    model = GT(d_model=8)
+    model = GT(d_model=8, dim_feedforward=2048)
     model.load_state_dict(torch.load(modelPath))
     model.eval()
     return model
@@ -82,7 +83,8 @@ def audioEval():
     synthesize_all(MONOTONIC_DIR, AUDIO_DIR, prefix="monotonic")
     
     # load model for inference
-    model = loadModelForInference(MODELS_DIR + "/full_model.pth")
+    model_path = MODELS_DIR + "/" + os.listdir(MODELS_DIR)[0]
+    model = loadModelForInference(model_path)
     # from the monotonic directory, run inference on all midi files
     inferFunc = lambda sourcePath, outPath: runInferenceOnMonotonicMidi(model, sourcePath, outPath)
     transformFilesInDir(inferFunc, MONOTONIC_DIR, INFERRED_DIR, midExtension)
