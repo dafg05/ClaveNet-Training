@@ -10,3 +10,4 @@ out/*
 midi/inferred/*
 midi/monotonic/*
 midi/source/*
+preprocessedDatasets/*

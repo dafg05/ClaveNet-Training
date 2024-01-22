@@ -6,16 +6,6 @@ import numpy as np
 class GrooveTransformerModel(nn.Module):
     def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32):
         super(GrooveTransformerModel, self).__init__()
-
-        device = (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-        print(f"Using {device} device")
-
         # hvo dimensions
         self.pitches = pitches
         self.time_steps = time_steps
@@ -41,7 +31,7 @@ class GrooveTransformerModel(nn.Module):
         hits, velocites, offsets = chunks
 
         hits = self.sig(hits)
-        hits = torch.where(hits > 0.5, 1.0, 0.0)
+        hits = torch.where(hits >= 0.5, 1.0, 0.0)
         velocites = self.sig(velocites)
         offsets = self.tanh(offsets)
 

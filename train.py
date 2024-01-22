@@ -7,6 +7,7 @@ import numpy as np
 
 from hvoLoss import HVO_Loss
 from dataset import GrooveHVODataset
+from hvo_processing.hvo_sets import HVOSetRetriever
 from grooveTransformer import GrooveTransformerModel
 from torch.utils.data import DataLoader
 from datetime import datetime
@@ -14,14 +15,16 @@ from utils import ndarray_to_tensor, is_valid_hvo
 
 MODELS_DIR = "models"
 HYPERS_DIR = "hypers"
-SMOL_DATA_DIR = "testData"
 PROCESSED_DATA_DIR = "processedData"
+
+DATASETS_DIR = "preprocessedDatasets"
+PREPREOCESSED_DATA_DIR = DATASETS_DIR + "/Processed_On_20_01_2024_at_20_38_hrs"
 
 PITCHES = 9
 TIME_STEPS = 32
 TORCH_SEED = 0
 
-LOG_EVERY = 1
+LOG_EVERY = 256
 DEBUG = False
 
 # TRAINING AND TESTING LOOPS
@@ -97,6 +100,20 @@ def test_loop(dataloader, model, loss_fn, epoch):
 
 # HELPERS
     
+def get_dataloader(preprocessed_datadir: str, partition: str, tappify_params: dict, batch_size: int,dev: str):
+    hsr = HVOSetRetriever(preprocessed_datadir)
+    if partition == "train":
+        dataset, metadata = hsr.get_trainset_and_metadata()
+    elif partition == "test":
+        dataset, metadata = hsr.get_testset_and_metadata()
+    elif partition == "validation":
+        dataset, metadata = hsr.get_validationset_and_metadata()
+    else:
+        raise Exception(f"Invalid partition: {partition}")
+    
+    processedData = GrooveHVODataset(hvo_set=dataset, metadata=metadata, tappify_params=tappify_params, dev=dev)
+    return DataLoader(processedData, batch_size=batch_size, shuffle=False)
+    
 def wandb_init():
     wandb.login() 
     run = wandb.init(
@@ -104,20 +121,21 @@ def wandb_init():
         project=project_name,
         # Track hyperparameters and run metadata
         config={
-        "torch_seed": torch_seed,
-        "epochs": epochs,
-        "traning_data_size": len(train_loader.dataset),
-        "test_data_size": len(test_loader.dataset),
-        "batch_size": batch_size,
-        "d_model": d_model,
-        "dim_forward": dim_forward,
-        "n_heads": n_heads,
-        "n_layers": n_layers,
-        "dropout": dropout,
-        "learning_rate": learning_rate,
-        "loss_penalty": loss_penalty,
-        "grad_clip": grad_clip,    
-        "data_augmentation": data_augmentation
+            "start_time" : start_time,
+            "torch_seed": torch_seed,
+            "epochs": epochs,
+            "traning_data_size": len(train_loader.dataset),
+            "test_data_size": len(test_loader.dataset),
+            "batch_size": batch_size,
+            "d_model": d_model,
+            "dim_forward": dim_forward,
+            "n_heads": n_heads,
+            "n_layers": n_layers,
+            "dropout": dropout,
+            "learning_rate": learning_rate,
+            "loss_penalty": loss_penalty,
+            "grad_clip": grad_clip,    
+            "data_augmentation": data_augmentation
     })
 
     # plotting test loss
@@ -165,7 +183,6 @@ def usage():
     print("paramFilename: 'file name that contains hyperparameters")
 
 
-
 # MAIN
 
 if __name__ == "__main__":
@@ -195,11 +212,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     torch_seed = TORCH_SEED
-    epochs = 2 if smol else 50
     # load hyperparameters
     with open(hypersPath) as hp:
         hypersDict = json.load(hp)
-
 
     batch_size = hypersDict["batch_size"]
     d_model = 8 if smol else hypersDict["d_model"]
@@ -210,31 +225,40 @@ if __name__ == "__main__":
     learning_rate = hypersDict["learning_rate"]
     loss_penalty = hypersDict["loss_penalty"] # applied to velocites and offset values that occur in non-hit locations
     grad_clip = hypersDict["grad_clip"]
+    epochs = 1 if smol else hypersDict["epochs"]
     data_augmentation = hypersDict["data_augmentation"]
+    tappify_params = hypersDict["tappify_params"]
 
     # torch options
     torch.manual_seed(torch_seed)
     torch.autograd.set_detect_anomaly(DEBUG)
 
-    # data loading
-    data_dir = SMOL_DATA_DIR if smol else PROCESSED_DATA_DIR
-    augSuffix = "_aug" if data_augmentation else ""
-    print(f"Loading data from {data_dir}..., using augmentation: {data_augmentation}")
-    try:
-        training_name = "training_aug" if data_augmentation else "training" 
-        training_data = GrooveHVODataset(f"{data_dir}/{training_name}.pkl", transform=ndarray_to_tensor, target_transform=ndarray_to_tensor)
-        train_loader = DataLoader(training_data, batch_size=batch_size, shuffle=False)
-    except Exception as e:
-        raise Exception(f"Error loading training data from data_dir: {data_dir}. {e}")
+    # device
+    device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )
+    print(f"Using {device} device")
 
+    # record run startTime
+    start_time = int(datetime.now().timestamp())
+
+    # data loading
+    print(f"Loading data from {PREPREOCESSED_DATA_DIR}..., using augmentation: {data_augmentation}")
     try:
-        test_name = "test_aug" if data_augmentation else "test"
-        test_data = GrooveHVODataset(f"{data_dir}/{test_name}.pkl", transform=ndarray_to_tensor, target_transform=ndarray_to_tensor)
-        test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+        partition = "train"
+        train_loader = get_dataloader(PREPREOCESSED_DATA_DIR, partition, tappify_params, batch_size, device)
+        partition = "test"
+        test_loader = get_dataloader(PREPREOCESSED_DATA_DIR, partition, tappify_params, batch_size, device)
+
+        print(f"Processed {len(train_loader.dataset)} train examples and {len(test_loader.dataset)} test examples")
     except Exception as e:
-        raise Exception(f"Error loading test data from data_dir: {data_dir}. {e}")
+        raise Exception(f"Error loading {partition} data from dir: {PREPREOCESSED_DATA_DIR}: {e}")
     
-    # training visualization and wandb
+    # training visualization and logging
     torch.set_printoptions(threshold=10000)
     project_name = "MGT-local"
 
@@ -243,6 +267,7 @@ if __name__ == "__main__":
 
     # init
     model = GrooveTransformerModel(d_model=d_model, nhead=n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout)
+    model.to(device)
     loss_fn = HVO_Loss(penalty=loss_penalty)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
@@ -255,14 +280,14 @@ if __name__ == "__main__":
         test_loop(test_loader, model, loss_fn, epoch)
         print("-------------------------------")
 
-    print("Saving model...")
 
+    # save model
+    print("Saving model...")
 
     model_prefix = "smol" if smol else "full"
     augSuffix = "aug" if data_augmentation else "reg"
-    modelSuffix = f"{augSuffix}_{torch_seed}s_{epochs}e_{int(datetime.now().timestamp())}t"
+    modelSuffix = f"{augSuffix}_{torch_seed}s_{epochs}e_{start_time}t"
     modelName = f"{model_prefix}_{modelSuffix}"
-
 
     torch.save(model.state_dict(), f"{MODELS_DIR}/{modelName}.pth")
     print(f"Saved model {modelName} in {MODELS_DIR}!")

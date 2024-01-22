@@ -8,5 +8,12 @@
     "learning_rate": 0.037,
     "loss_penalty" : 0.497,
     "grad_clip" : 100.0,
-    "data_augmentation" : false
+    "epochs" : 100,
+    "data_augmentation" : false,
+    "tappify_params" : {
+        "tapped_sequence_voice": "HH_CLOSED",
+        "tapped_sequence_collapsed": false,
+        "tapped_sequence_velocity_mode": 1,
+        "tapped_sequence_offset_mode": 3
+    }
 }
