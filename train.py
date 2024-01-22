@@ -3,11 +3,10 @@ import wandb
 import sys
 import os
 import json
-import numpy as np
+import pickle
 
 from hvoLoss import HVO_Loss
 from dataset import GrooveHVODataset
-from hvo_processing.hvo_sets import HVOSetRetriever
 from grooveTransformer import GrooveTransformerModel
 from torch.utils.data import DataLoader
 from datetime import datetime
@@ -15,10 +14,8 @@ from utils import ndarray_to_tensor, is_valid_hvo
 
 MODELS_DIR = "models"
 HYPERS_DIR = "hypers"
-PROCESSED_DATA_DIR = "processedData"
-
-DATASETS_DIR = "preprocessedDatasets"
-PREPREOCESSED_DATA_DIR = DATASETS_DIR + "/Processed_On_20_01_2024_at_20_38_hrs"
+PROCESSED_DATASETS_DIR = "processedDatasets"
+DATA_DIR = PROCESSED_DATASETS_DIR + "/processed_at_1705957464"
 
 PITCHES = 9
 TIME_STEPS = 32
@@ -99,20 +96,17 @@ def test_loop(dataloader, model, loss_fn, epoch):
     test_logging(log_wandb, test_loss, hit_accuracy, epoch)
 
 # HELPERS
-    
-def get_dataloader(preprocessed_datadir: str, partition: str, tappify_params: dict, batch_size: int,dev: str):
-    hsr = HVOSetRetriever(preprocessed_datadir)
-    if partition == "train":
-        dataset, metadata = hsr.get_trainset_and_metadata()
-    elif partition == "test":
-        dataset, metadata = hsr.get_testset_and_metadata()
-    elif partition == "validation":
-        dataset, metadata = hsr.get_validationset_and_metadata()
-    else:
-        raise Exception(f"Invalid partition: {partition}")
-    
-    processedData = GrooveHVODataset(hvo_set=dataset, metadata=metadata, tappify_params=tappify_params, dev=dev)
-    return DataLoader(processedData, batch_size=batch_size, shuffle=False)
+
+def get_dataloader(data_dir, partition, batch_size, device):
+    path = f'{data_dir}/{partition}.pkl'
+    with open(path, 'rb') as file:
+        content = pickle.load(file)
+
+        inputs = content["inputs"]
+        outputs = content["outputs"]
+
+        dataset = GrooveHVODataset(inputs=inputs, outputs=outputs, dev=device)
+        return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
     
 def wandb_init():
     wandb.login() 
@@ -211,7 +205,9 @@ if __name__ == "__main__":
         print(f"Error: {hypersPath} does not exist!")
         sys.exit(1)
 
+    # some metadata
     torch_seed = TORCH_SEED
+
     # load hyperparameters
     with open(hypersPath) as hp:
         hypersDict = json.load(hp)
@@ -227,7 +223,6 @@ if __name__ == "__main__":
     grad_clip = hypersDict["grad_clip"]
     epochs = 1 if smol else hypersDict["epochs"]
     data_augmentation = hypersDict["data_augmentation"]
-    tappify_params = hypersDict["tappify_params"]
 
     # torch options
     torch.manual_seed(torch_seed)
@@ -247,16 +242,17 @@ if __name__ == "__main__":
     start_time = int(datetime.now().timestamp())
 
     # data loading
-    print(f"Loading data from {PREPREOCESSED_DATA_DIR}..., using augmentation: {data_augmentation}")
+    print(f"Loading data from {DATA_DIR} using augmentation: {data_augmentation}")
     try:
+        # TODO: record processed_time
         partition = "train"
-        train_loader = get_dataloader(PREPREOCESSED_DATA_DIR, partition, tappify_params, batch_size, device)
+        train_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
         partition = "test"
-        test_loader = get_dataloader(PREPREOCESSED_DATA_DIR, partition, tappify_params, batch_size, device)
+        test_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
 
-        print(f"Processed {len(train_loader.dataset)} train examples and {len(test_loader.dataset)} test examples")
+        print(f"Loaded {len(train_loader.dataset)} train examples and {len(test_loader.dataset)} test examples")
     except Exception as e:
-        raise Exception(f"Error loading {partition} data from dir: {PREPREOCESSED_DATA_DIR}: {e}")
+        raise Exception(f"Error loading {partition} data from dir: {DATA_DIR}: {e}")
     
     # training visualization and logging
     torch.set_printoptions(threshold=10000)
