@@ -129,7 +129,8 @@ def wandb_init():
             "dropout": dropout,
             "learning_rate": learning_rate,
             "loss_penalty": loss_penalty,
-            "grad_clip": grad_clip,    
+            "grad_clip": grad_clip,
+            "data_processed_time": processed_time,
             "data_augmentation": data_augmentation
     })
 
@@ -208,6 +209,7 @@ if __name__ == "__main__":
 
     # some metadata
     torch_seed = TORCH_SEED
+    processed_time = PROCESSED_TIME
 
     # load hyperparameters
     with open(hypersPath) as hp:
