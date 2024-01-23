@@ -15,7 +15,8 @@ from utils import ndarray_to_tensor, is_valid_hvo
 MODELS_DIR = "models"
 HYPERS_DIR = "hypers"
 PROCESSED_DATASETS_DIR = "processedDatasets"
-DATA_DIR = PROCESSED_DATASETS_DIR + "/processed_at_1705957464"
+PROCESSED_TIME = 1705958771
+DATA_DIR = f"{PROCESSED_DATASETS_DIR}/processed_at_{PROCESSED_TIME}"
 
 PITCHES = 9
 TIME_STEPS = 32

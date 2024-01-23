@@ -87,8 +87,6 @@ def process_by_partition(subsets_dir, partition, tappify_params):
     
     return process_subset(subset=subset, metadata=metadata, max_len=MAX_LEN, tappify_params=tappify_params)
 
-   
-    
 if __name__ == "__main__":
     """
     Processed train, test, and validation sets. Write them to processedDatasets
@@ -119,7 +117,6 @@ if __name__ == "__main__":
             "processed_time" : processed_time,
             "inputs" : inputs,
             "outputs" : outputs,
-            "hvo_sequences" : hvo_sequences
         }
         filename = f'{out_dir}/{p}.pkl'
         pickle.dump(content, open(filename, 'wb'))
