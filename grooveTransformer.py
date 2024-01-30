@@ -2,41 +2,105 @@ import torch
 from torch import nn, Tensor
 import math
 import numpy as np
+    
+class GrooveTransformer(nn.Module):
+    def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32, hit_sigmoid_in_forward = False):
+        # TODO: currently testing if it's better to apply sigmoid in forward or just in inference
+        super(GrooveTransformer, self).__init__()
 
-class GrooveTransformerModel(nn.Module):
-    def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32):
-        super(GrooveTransformerModel, self).__init__()
-        # hvo dimensions
-        self.pitches = pitches
-        self.time_steps = time_steps
+        self.hit_sigmoid_in_forward = hit_sigmoid_in_forward
         
         # layers
-        self.linear1 = nn.Linear(3 * self.pitches, d_model)
-        self.relu = nn.ReLU()
-        self.pos_encoder = PositionalEncoding(d_model=d_model)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
-        self.linear2 = nn.Linear(d_model, 3 * self.pitches)
-        self.sig = nn.Sigmoid()
-        self.tanh = nn.Tanh()
+        self.input = InputLayer(embedding_size=3*pitches, d_model=d_model, dropout=dropout, max_len=time_steps)
+        self.encoder = Encoder(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout, num_encoder_layers=num_layers)
+        self.output = OutputLayer(embedding_size=3 * pitches, d_model=d_model, hit_sigmoid_in_forward=hit_sigmoid_in_forward)
 
     def forward(self, src):
-        x = self.linear1(src)
-        x = self.relu(x)
-        x = self.pos_encoder(x)
-        output = self.transformer_encoder(x)
-        output = self.linear2(output)
-        chunks = torch.chunk(output, 3, dim=2)
+        x = self.input(src)
+        encoded = self.encoder(x)
+        h, v, o = self.output(encoded)
+        return h, v, o
+    
+    def inference(self, src):
+        self.eval()
+        with torch.no_grad():
+            h, v, o = self.forward(src)
+            if not self.hit_sigmoid_in_forward: # if we didn't apply sigmoid in forward, we do it here
+                h = torch.sigmoid(h)
+            h = torch.where(h > 0.5, 1.0, 0.0)
+            return h, v, o
 
+class InputLayer(torch.nn.Module):
+    """
+    Copy_pasted from https://github.com/behzadhaki/BaseGrooveTransformers/blob/main/models/io_layers.py
+    """
+    def __init__(self, embedding_size, d_model, dropout, max_len):
+        super(InputLayer, self).__init__()
+
+        self.linearIn = torch.nn.Linear(embedding_size, d_model, bias=True)
+        self.relu = torch.nn.ReLU()
+        self.posEncoding = PositionalEncoding(d_model, max_len, dropout)
+
+    def init_weights(self, initrange=0.1):
+        # TODO: why are we initializing the weights like this?
+        self.linearIn.bias.data.zero_()
+        self.linearIn.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, src):
+        x = self.linearIn(src)
+        x = self.relu(x)
+        out = self.posEncoding(x)
+
+        return out
+    
+class Encoder(torch.nn.Module):
+    """
+    Copy pasted from https://github.com/behzadhaki/BaseGrooveTransformers/blob/main/models/encoder.py
+    """
+
+    def __init__(self, d_model, nhead, dim_feedforward, dropout, num_encoder_layers):
+        super(Encoder, self).__init__()
+        # TODO: why do we need to normalize the encoder output?
+        norm_encoder = torch.nn.LayerNorm(d_model)
+        encoder_layer = torch.nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout)
+        self.Encoder = torch.nn.TransformerEncoder(encoder_layer, num_encoder_layers, norm_encoder)
+
+    def forward(self, src):
+        # TODO: why are we permuting?
+        src = src.permute(1, 0, 2)  # 32xNxd_model
+        out = self.Encoder(src)  # 32xNxd_model
+        out = out.permute(1, 0, 2)  # Nx32xd_model
+        return out
+
+class OutputLayer(torch.nn.Module):
+    """
+    Based on https://github.com/behzadhaki/BaseGrooveTransformers/blob/main/models/io_layers.py
+    """
+    def __init__(self, embedding_size, d_model, hit_sigmoid_in_forward=False):
+        super(OutputLayer, self).__init__()
+
+        self.embedding_size = embedding_size
+        self.linearOut = torch.nn.Linear(d_model, embedding_size)
+
+        self.hit_sigmoid_in_forward = hit_sigmoid_in_forward
+
+    def init_weights(self, initrange=0.1):
+        # TODO: why are we initializing the weights like this?
+        self.linearOut.bias.data.zero_()
+        self.linearOut.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, src):
+        src = self.linearOut(src)
+        # TODO: test chunking
+        chunks = torch.chunk(src, 3, dim=2)
         hits, velocites, offsets = chunks
 
-        hits = self.sig(hits)
-        hits = torch.where(hits >= 0.5, 1.0, 0.0)
-        velocites = self.sig(velocites)
-        offsets = self.tanh(offsets)
-
-        hvo = torch.cat((hits, velocites, offsets), dim=2)
-        return hvo
+        if self.hit_sigmoid_in_forward:
+            hits = torch.sigmoid(hits)
+        velocites = torch.sigmoid(velocites)
+        # TODO: why are we multiplying tanh(offsets) by 0.5?
+        offsets = torch.tanh(offsets) * 0.5
+        return hits, velocites, offsets
 
 class PositionalEncoding(nn.Module):
     """
@@ -71,7 +135,6 @@ class PositionalEncoding(nn.Module):
         """
         x = x + self.pe[:x.size(0)]
         return x
-
         
 if __name__ == "__main__":
 
@@ -83,11 +146,3 @@ if __name__ == "__main__":
         else "cpu"
     )
     print(f"Using {device} device")
-    
-    model = GrooveTransformerModel().to(device)
-    x = torch.rand(1, 32, 27, device=device)
-    hvo = model(x)
-    
-    testPassed = x.shape == hvo.shape
-
-    print(f"Test passed? {testPassed}")

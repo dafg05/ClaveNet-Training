@@ -5,9 +5,9 @@ import os
 import json
 import pickle
 
-from hvoLoss import HVO_Loss
+from hvoLoss import HVO_Loss, getHitAccuracy
 from dataset import GrooveHVODataset
-from grooveTransformer import GrooveTransformerModel
+from grooveTransformer import GrooveTransformer
 from torch.utils.data import DataLoader
 from datetime import datetime
 from utils import ndarray_to_tensor, is_valid_hvo
@@ -18,6 +18,7 @@ PROCESSED_DATASETS_DIR = "processedDatasets"
 PROCESSED_TIME = 1705958771
 DATA_DIR = f"{PROCESSED_DATASETS_DIR}/processed_at_{PROCESSED_TIME}"
 
+HIT_SIGMOID_IN_FORWARD = True
 PITCHES = 9
 TIME_STEPS = 32
 TORCH_SEED = 0
@@ -28,31 +29,28 @@ DEBUG = False
 # TRAINING AND TESTING LOOPS
 
 def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch):
-    """
-    From pytorch tutorial: https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
-    """
-    model.train() # Set the model to training mode - important for batch normalization and dropout layers
-    # with torch.autograd.detect_anomaly():
+    model.train()
     for batch, (x, y) in enumerate(dataloader):
         if not (is_valid_hvo(x) and is_valid_hvo(y)):
             raise Exception("Invalid training data! x or y contains nans or infs!")
 
         # Compute prediction and loss
-        pred = model(x)
+        h, v, o = model(x)
+        pred = torch.cat((h, v, o), dim=2)
         loss_dict = loss_fn(pred, y)
 
         if not (is_valid_hvo(pred)):
             raise Exception("Something went wrong in the model! pred contains nans or infs!")
 
-        loss = sum(loss_dict.values())
+        total_loss = sum(loss_dict.values())
         # Backpropagation
-        loss.backward()
+        total_loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
         optimizer.zero_grad()
         
         if batch % LOG_EVERY == 0:
-            loss, training_sample = loss.item(), batch * len(x)
+            total_loss, training_sample = total_loss.item(), batch * len(x)
             training_logging(log_wandb, training_sample, loss_dict, grad_norm, epoch)
 
 def test_loop(dataloader, model, loss_fn, epoch):
@@ -73,20 +71,20 @@ def test_loop(dataloader, model, loss_fn, epoch):
 
     test_loss, incorrect_hits = 0, 0
 
-    with torch.no_grad():
-        for x, y in dataloader:
-            if not (is_valid_hvo(x) and is_valid_hvo(y)):
-                raise Exception("Invalid test data! x or y contains nans or infs!")
-            pred = model(x)
-            if not (is_valid_hvo(pred)):
-                raise Exception("Something went wrong in the model! pred contains nans or infs!")
-            # test_loss += loss_fn(pred, y).item()
-            loss_dict = loss_fn(pred, y)
-            test_loss += sum(loss_dict.values()).item()
-            
-            h_pred = pred[:, :, :PITCHES]
-            h_y = y[:, :, :PITCHES]
-            incorrect_hits += torch.sum(torch.abs(h_pred - h_y))
+    for x, y in dataloader:
+        if not (is_valid_hvo(x) and is_valid_hvo(y)):
+            raise Exception("Invalid test data! x or y contains nans or infs!")
+        h, v, o = model.inference(x)
+        pred = torch.cat((h, v, o), dim=2)
+        if not (is_valid_hvo(pred)):
+            raise Exception("Something went wrong in the model! pred contains nans or infs!")
+        # test_loss += loss_fn(pred, y).item()
+        loss_dict = loss_fn(pred, y)
+        test_loss += sum(loss_dict.values()).item()
+        
+        h_pred = pred[:, :, :PITCHES]
+        h_y = y[:, :, :PITCHES]
+        incorrect_hits += torch.sum(torch.abs(h_pred - h_y))
 
     assert incorrect_hits.item().is_integer(), "incorrect_hits is not an integer!"
     assert incorrect_hits.item() <= total_hits, "incorrect_hits is greater than total_hits!"
@@ -131,7 +129,8 @@ def wandb_init():
             "loss_penalty": loss_penalty,
             "grad_clip": grad_clip,
             "data_processed_time": processed_time,
-            "data_augmentation": data_augmentation
+            "data_augmentation": data_augmentation,
+            "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD
     })
 
     # plotting test loss
@@ -247,7 +246,6 @@ if __name__ == "__main__":
     # data loading
     print(f"Loading data from {DATA_DIR} using augmentation: {data_augmentation}")
     try:
-        # TODO: record processed_time
         partition = "train"
         train_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
         partition = "test"
@@ -265,10 +263,11 @@ if __name__ == "__main__":
         wandb_init()
 
     # init
-    model = GrooveTransformerModel(d_model=d_model, nhead=n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout)
+    model = GrooveTransformer(d_model=d_model, nhead = n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout, hit_sigmoid_in_forward=HIT_SIGMOID_IN_FORWARD)
     model.to(device)
     loss_fn = HVO_Loss(penalty=loss_penalty)
 
+    # TODO: can we use Adam?
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
     # loop
