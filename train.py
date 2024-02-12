@@ -10,23 +10,17 @@ from dataset import GrooveHVODataset
 from grooveTransformer import GrooveTransformer
 from torch.utils.data import DataLoader
 from datetime import datetime
-from utils import ndarray_to_tensor, is_valid_hvo
+from constants import *
+from utils import is_valid_hvo
 
-MODELS_DIR = "models"
-HYPERS_DIR = "hypers"
 PROCESSED_DATASETS_DIR = "processedDatasets"
-PROCESSED_TIME = 1705958771
+PROCESSED_TIME = 1707739887
 DATA_DIR = f"{PROCESSED_DATASETS_DIR}/processed_at_{PROCESSED_TIME}"
 
-HIT_SIGMOID_IN_FORWARD = True
-PITCHES = 9
-TIME_STEPS = 32
-TORCH_SEED = 0
+HIT_SIGMOID_IN_FORWARD = False
 
 LOG_EVERY = 256
 DEBUG = False
-
-# TRAINING AND TESTING LOOPS
 
 def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch):
     model.train()
@@ -107,6 +101,27 @@ def get_dataloader(data_dir, partition, batch_size, device):
         dataset = GrooveHVODataset(inputs=inputs, outputs=outputs, dev=device)
         return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
     
+def get_aug_params(data_dir):
+    # open dataAugParams.json file at data_dir, return as dict
+    with open(f"{data_dir}/{DATA_AUG_PARAMS}") as file:
+        return json.load(file)
+
+def format_aug_params(jsonDict: dict):
+    """
+    If the params file contains all the necessary keys, return a tuple of the values. Otherwise, return None
+    """
+    try:
+        augSeed = jsonDict["seed"]
+        seedExamplesSet = jsonDict["seedExamplesSet"]
+        numTransformations = jsonDict["numTransformations"]
+        numReplacements = jsonDict["numReplacements"]
+        preferredStyle = jsonDict["preferredStyle"]
+        outOfStyleProb = jsonDict["outOfStyleProb"]
+        return augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb
+    except KeyError as e:
+        print(f"DataAugParam {e} not found in jsonDict!")
+        return None, None, None, None, None, None
+    
 def wandb_init():
     wandb.login() 
     run = wandb.init(
@@ -129,8 +144,13 @@ def wandb_init():
             "loss_penalty": loss_penalty,
             "grad_clip": grad_clip,
             "data_processed_time": processed_time,
-            "data_augmentation": data_augmentation,
-            "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD
+            "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD,
+            "augmentation_seed": augSeed,
+            "seed_examples_set": seedExamplesSet,
+            "num_transformations": numTransformations,
+            "num_replacements": numReplacements,
+            "preferred_style": preferredStyle,
+            "out_of_style_prob": outOfStyleProb,
     })
 
     # plotting test loss
@@ -177,11 +197,9 @@ def usage():
     print("log_location: 'wandb' or 'local'")
     print("paramFilename: 'file name that contains hyperparameters")
 
-
 # MAIN
 
 if __name__ == "__main__":
-
     if len(sys.argv) < 4:
         usage()
         sys.exit(1)
@@ -214,6 +232,7 @@ if __name__ == "__main__":
     with open(hypersPath) as hp:
         hypersDict = json.load(hp)
 
+    # TODO: make object for hyperparameters
     batch_size = hypersDict["batch_size"]
     d_model = 8 if smol else hypersDict["d_model"]
     dim_forward = hypersDict["dim_forward"]
@@ -224,7 +243,9 @@ if __name__ == "__main__":
     loss_penalty = hypersDict["loss_penalty"] # applied to velocites and offset values that occur in non-hit locations
     grad_clip = hypersDict["grad_clip"]
     epochs = 1 if smol else hypersDict["epochs"]
-    data_augmentation = hypersDict["data_augmentation"]
+
+    # load data augmentation parameters
+    augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb = format_aug_params(get_aug_params(DATA_DIR))
 
     # torch options
     torch.manual_seed(torch_seed)
@@ -240,11 +261,8 @@ if __name__ == "__main__":
     )
     print(f"Using {device} device")
 
-    # record run startTime
-    start_time = int(datetime.now().timestamp())
-
     # data loading
-    print(f"Loading data from {DATA_DIR} using augmentation: {data_augmentation}")
+    print(f"Loading data from {DATA_DIR} using augmentation: {augSeed is not None}")
     try:
         partition = "train"
         train_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
@@ -261,6 +279,9 @@ if __name__ == "__main__":
 
     if log_wandb:
         wandb_init()
+
+    # record run startTime
+    start_time = int(datetime.now().timestamp())
 
     # init
     model = GrooveTransformer(d_model=d_model, nhead = n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout, hit_sigmoid_in_forward=HIT_SIGMOID_IN_FORWARD)
@@ -283,8 +304,7 @@ if __name__ == "__main__":
     print("Saving model...")
 
     model_prefix = "smol" if smol else "full"
-    augSuffix = "aug" if data_augmentation else "reg"
-    modelSuffix = f"{augSuffix}_{torch_seed}s_{epochs}e_{start_time}t"
+    modelSuffix = f"{epochs}e_{start_time}t"
     modelName = f"{model_prefix}_{modelSuffix}"
 
     torch.save(model.state_dict(), f"{MODELS_DIR}/{modelName}.pth")

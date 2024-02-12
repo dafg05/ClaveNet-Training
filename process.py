@@ -1,17 +1,17 @@
 import numpy as np
 import pickle
 import os
+import mido
+import sys
+import shutil
 
 from hvo_sequence.drum_mappings import ROLAND_REDUCED_MAPPING
 from hvo_processing.hvo_sets import HVOSetRetriever
 from tqdm import tqdm
 from datetime import datetime
+from constants import *
 
-MAX_LEN = 32
-
-PROCESSED_DATASETS_DIR = "processedDatasets"
-PREPROCESSED_DATASETS_DIR = "preprocessedDatasets"
-SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/Processed_On_20_01_2024_at_20_38_hrs"
+SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/PreProcessed_On_12_02_2024_at_06_30_hrs"
 
 def process_subset(subset, metadata, max_len, tappify_params):
     """
@@ -68,26 +68,50 @@ def process_subset(subset, metadata, max_len, tappify_params):
     inputs = np.array(inputs)
     outputs = np.array(outputs)
 
-    # inputs = torch.FloatTensor(inputs).to(dev)
-    # outputs = torch.FloatTensor(outputs).to(dev)
-
     return inputs, outputs, hvo_sequences
 
 def process_by_partition(subsets_dir, partition, tappify_params):
     hsr = HVOSetRetriever(subsets_dir)
 
     if partition == "train":
-        subset, metadata = hsr.get_trainset_and_metadata()
+        subset = hsr.get_train_hvoset()
+        metadata = hsr.get_train_metadata()
     elif partition == "test":
-        subset, metadata = hsr.get_testset_and_metadata()
+        subset = hsr.get_test_hvoset()
+        metadata = hsr.get_test_metadata()
     elif partition == "validation":
-        subset, metadata = hsr.get_validationset_and_metadata()
+        subset = hsr.get_validation_hvoset()
+        metadata = hsr.get_validation_metadata()
     else:
         raise Exception(f"Invalid partition: {partition}")
     
     return process_subset(subset=subset, metadata=metadata, max_len=MAX_LEN, tappify_params=tappify_params)
 
-if __name__ == "__main__":
+def saveMidiData(midi_data, filename, out_dir):
+    midi_path = f'{out_dir}/{filename}.mid'
+    with open(midi_path, "wb") as binary_file:
+        binary_file.write(midi_data)
+
+def writeMidiSetToDir(partition, preprocessed_dir, out_dir):
+    hsr = HVOSetRetriever(preprocessed_dir)
+    if partition == "train":
+        midi_set = hsr.get_train_midiset()
+    elif partition == "test":
+        midi_set = hsr.get_test_midiset()
+    elif partition == "validation":
+        midi_set = hsr.get_validation_midiset()
+    else:
+        raise Exception(f"Invalid partition: {partition}")
+
+    partition_dir = f'{preprocessed_dir}/GrooveMIDI_processed_{partition}'
+    with open (f"{partition_dir}/midi_data.obj", "rb") as pickled_midi:
+        midi_set = pickle.load(pickled_midi)
+        print(f"Loaded {len(midi_set)} midis from {out_dir}")
+
+        for idx, midi in enumerate(midi_set):
+            saveMidiData(midi, f"{partition}{idx}", out_dir)
+
+def processing(preprocessed_dir, processed_dir):
     """
     Processed train, test, and validation sets. Write them to processedDatasets
     """
@@ -102,16 +126,16 @@ if __name__ == "__main__":
 
     # process time meta data goes on out_directory name
     processed_time = int(datetime.now().timestamp())
-    out_dir = f"{PROCESSED_DATASETS_DIR}/processed_at_{processed_time}"
+    out_dir = f"{processed_dir}/processed_at_{processed_time}"
     os.mkdir(out_dir)
 
     # preprocess run name goes on a txt file inside the out directory
-    preprocess_run_name = SUBSETS_DIR.split("/")[-1]
+    preprocess_run_name = preprocessed_dir.split("/")[-1]
     with open(f"{out_dir}/preprocessed_run_name.txt", "x") as f:
         f.write(preprocess_run_name)
     
     for p in partitions:
-        inputs, outputs, hvo_sequences = process_by_partition(subsets_dir=SUBSETS_DIR, partition=p, tappify_params=tappify_params)
+        inputs, outputs, _ = process_by_partition(subsets_dir=preprocessed_dir, partition=p, tappify_params=tappify_params)
         content = {
             "preprocess_run_name" : preprocess_run_name,
             "processed_time" : processed_time,
@@ -120,5 +144,21 @@ if __name__ == "__main__":
         }
         filename = f'{out_dir}/{p}.pkl'
         pickle.dump(content, open(filename, 'wb'))
+
+    # copy dataAugParams.json
+    shutil.copy(f'{preprocessed_dir}/{DATA_AUG_PARAMS}', f'{out_dir}/{DATA_AUG_PARAMS}')
+    
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python process.py <command>")
+        print("command: 'process' or 'writeMidi'")
+        sys.exit(1)
+    
+    if sys.argv[1] == "process":
+        processing(SUBSETS_DIR, PROCESSED_DATASETS_DIR)
+
+    elif sys.argv[1] == "writeMidi":
+        writeMidiSetToDir('validation', SUBSETS_DIR, SOURCE_DIR)
 
     
