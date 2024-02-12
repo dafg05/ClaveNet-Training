@@ -277,11 +277,11 @@ if __name__ == "__main__":
     torch.set_printoptions(threshold=10000)
     project_name = "MGT-local"
 
+     # record run startTime
+    start_time = int(datetime.now().timestamp())
+
     if log_wandb:
         wandb_init()
-
-    # record run startTime
-    start_time = int(datetime.now().timestamp())
 
     # init
     model = GrooveTransformer(d_model=d_model, nhead = n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout, hit_sigmoid_in_forward=HIT_SIGMOID_IN_FORWARD)
