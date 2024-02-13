@@ -2,10 +2,4 @@
 
 ## Requirements
 
-Required packages are listed in `requirements.txt`. The exception is `hvo_sequence` and `hvo_processing`, both of which must be installed from github:
-
-```
-pip install git+https://github.com/dafg05/hvo_sequence
-pip install git+https://github.com/dafg05/processing
-pip install git+https://github.com/dafg05/midiutils
-```
+Install required packages using `pip install -r requirements.txt`. Note that this will install two packages directly from their github repositories, as they have not been distributed through PyPI.
