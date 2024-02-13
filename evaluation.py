@@ -48,13 +48,12 @@ def loadModel(modelPath: str, hypersDict: dict) -> GT:
     model.load_state_dict(torch.load(modelPath, map_location=torch.device('cpu')))
     return model
 
-def getModelPath(start_time, seed, full=True, dataAug=False, epochs=100):
+def getModelPath(start_time,full=True, epochs=100):
     """
     Returns the path to the model
     """
     size_str = "full" if full else "smol"
-    aug_str = "aug" if dataAug else "reg"
-    return f'{MODELS_DIR}/{size_str}_{aug_str}_{seed}s_{epochs}e_{start_time}t.pth'
+    return f'{MODELS_DIR}/{size_str}_{epochs}e_{start_time}t.pth'
 
 def getModelPathFromStartTimeAndHypers(start_time: int, hypersDict: dict) -> str:
     """
@@ -63,7 +62,7 @@ def getModelPathFromStartTimeAndHypers(start_time: int, hypersDict: dict) -> str
     dataAug = hypersDict["data_augmentation"]
     epochs = hypersDict["epochs"]
     # TODO: don't hardcode the seed
-    return getModelPath(start_time, TORCH_SEED, FULL, dataAug, epochs)
+    return getModelPath(start_time, FULL, epochs)
 
 def transformFilesInDir(transformFunc, sourceDir: str, outDir: str, extension: str=None):
     """
