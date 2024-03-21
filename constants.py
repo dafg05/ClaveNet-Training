@@ -5,6 +5,9 @@ HYPERS_DIR = "hypers"
 OUT_DIR = "out"
 AUDIO_DIR = OUT_DIR + "/audio"
 
+EVAL_RESULTS_DIR = "evalResults"
+
+
 MIDI_DIR = "midi"
 MONOTONIC_DIR = MIDI_DIR + "/monotonic"
 INFERRED_DIR = MIDI_DIR + "/inferred"
@@ -19,3 +22,7 @@ PROCESSED_DATASETS_DIR = "processedDatasets"
 PREPROCESSED_DATASETS_DIR = "preprocessedDatasets"
 
 DATA_AUG_PARAMS = "dataAugParams.json"
+
+VALIDATION_SUBSET = "GrooveMIDI_processed_validation"
+
+SF_PATH = "soundfonts/Standard_Drum_Kit.sf2"

@@ -1,38 +1,50 @@
 import torch
-import numpy as np
-import os
-import mido
 import sys
 import json
+import pickle
+from datetime import datetime
+from pathlib import Path
 
-from hvo_processing import converters
-from midiUtils import utils as mu
-from midiUtils.synthesize import synthesize_all
 from grooveTransformer import GrooveTransformer as GT
+import grooveEvaluator.relativeComparison as rc
+from evalDatasets import *
 from constants import *
 
-FULL = True
+VALIDATION_SOURCE_DIR = f'{PREPROCESSED_DATASETS_DIR}/PreProcessed_On_15_02_2024_at_16_49_hrs'
 
-def runInferenceOnMonotonicMidi(model: GT, monotonicMidiPath: str, outPath: str):
-    # convert midi to hvo tensor
-    hvoSeq = converters.midi_to_hvo_seq(monotonicMidiPath)
-    hvoArray = converters.hvo_seq_to_array(hvoSeq)
-    hvoArray = converters.pad_hvo_timesteps(hvoArray, 32)
-    hvoTensor = torch.from_numpy(hvoArray).float()
+def evaluateModel(model: GT, validation_set: ValidationHvoDataset, eval_set_size: int, synthesize_up_to: int=0):
+    """
+    Evaluate the model on a validation data set. Returns the evaluation time for bookkeeping purposes
+    """
+    eval_set = EvaluationHvoDataset(validation_set, eval_set_size)
+    print(f"Selected indices of eval_set: {eval_set.selectedIndices}")
 
-    # run inference
-    h, v, o = model.inference(hvoTensor)
-    outTensor = torch.cat((h, v, o), dim=2)
-
-    assert len(outTensor) == 1, f"Batch size of outTensor should be 1! outTensor.shape: {outTensor.shape}"
+    monotonic_set = MonotonicHvoDataset(eval_set)
+    generated_set = GeneratedHvoDataset(monotonic_set, model)
     
-    # convert hvo tensor to back to midi
-    outArray = outTensor[0].detach().numpy()
-    assert len(outArray) == 32 and len(outArray[0]) == 27, f"Shape of out array is wrong! outArray.shape: {outArray.shape}"
-    outSeq = converters.array_to_hvo_seq(outArray)
-    converters.hvo_seq_to_midi(outSeq, outPath)
+    assert synthesize_up_to <= len(eval_set)
+    
+    if synthesize_up_to > 0:
+        for i in range(synthesize_up_to):
+            eval_set[i].save_audio(f'{AUDIO_DIR}/eval{i}.wav', sf_path=SF_PATH)
+            monotonic_set[i].save_audio(f'{AUDIO_DIR}/monotonic{i}.wav', sf_path=SF_PATH)
+            generated_set[i].save_audio(f'{AUDIO_DIR}/generated{i}.wav', sf_path=SF_PATH)
+        print(f"Saved {synthesize_up_to} sets of audio files to {AUDIO_DIR}")
+    
+    comparison_result_by_feat = rc.relative_comparison(generated_set, eval_set)
 
-def loadModel(modelPath: str, hypersDict: dict) -> GT:
+    evaluation_time = int(datetime.now().timestamp())
+    results_filename = f'{EVAL_RESULTS_DIR}/comparison_results_{evaluation_time}'
+    selected_indices_filename = f'{EVAL_RESULTS_DIR}/indices_{evaluation_time}'
+    
+    pickle.dump(comparison_result_by_feat, open(results_filename, 'wb'))
+    pickle.dump(eval_set.selectedIndices, open(selected_indices_filename, 'wb'))
+
+    print(f"Pickled relative comparison results. Evaluation time: {evaluation_time}")
+
+    return evaluation_time
+
+def oldLoadModel(modelPath: str, hypersDict: dict) -> GT:
     """
     Loads model from path and hypersDict
     """
@@ -44,36 +56,35 @@ def loadModel(modelPath: str, hypersDict: dict) -> GT:
     n_heads = hypersDict["n_heads"]
     n_layers = hypersDict["n_layers"]
     
-    model = GT(d_model=d_model, nhead = n_heads, dim_feedforward=dim_forward, num_layers=n_layers, pitches=9, time_steps=32, hit_sigmoid_in_forward=False)
+    model = GT(d_model=d_model, nhead = n_heads, dim_feedforward=dim_forward, num_layers=n_layers, pitches=9)
     model.load_state_dict(torch.load(modelPath, map_location=torch.device('cpu')))
     return model
 
 def getModelPath(start_time,full=True, epochs=100):
     """
     Returns the path to the model
+    TODO: update me with whatever's needed to load a model
     """
     size_str = "full" if full else "smol"
     return f'{MODELS_DIR}/{size_str}_{epochs}e_{start_time}t.pth'
 
-def getModelPathFromStartTimeAndHypers(start_time: int, hypersDict: dict) -> str:
-    """
-    Returns the path to the model
-    """
-    dataAug = hypersDict["data_augmentation"]
-    epochs = hypersDict["epochs"]
-    # TODO: don't hardcode the seed
-    return getModelPath(start_time, FULL, epochs)
 
-def transformFilesInDir(transformFunc, sourceDir: str, outDir: str, extension: str=None):
+def loadModel(model_path: Path) -> GT:
     """
-    Applies a transformation function to all files in a directory
+    Loads model from its path
     """
-    for filename in os.listdir(sourceDir):
-        if extension and not filename.endswith(extension):
-            continue
-        sourcePath = os.path.join(sourceDir, filename)
-        outPath = os.path.join(outDir, filename)
-        transformFunc(sourcePath, outPath)
+    hyperparams = model_path.name.split('_')
+
+    d_model = int(hyperparams[0])
+    dim_forward = int(hyperparams[1])
+    n_heads = int(hyperparams[2])
+    n_layers = int(hyperparams[3])
+    pitches = int(hyperparams[4])
+    
+    model = GT(d_model=d_model, nhead=n_heads, dim_feedforward=dim_forward, num_layers=n_layers, pitches=pitches)
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+
+    return model
 
 def clearDir(dir):
     """
@@ -85,56 +96,32 @@ def clearDir(dir):
             os.remove(filePath)
         except Exception as e:
             print(f"Something went wrong when removing {filePath}.")
-            continue
-
-def clearDirsForAudioEval():
-    # clear monotonic, inferred and audio dirs
-    clearDir(MONOTONIC_DIR)
-    clearDir(INFERRED_DIR)
-    clearDir(AUDIO_DIR)
-    
-
-def audioEval(model: GT):
-
-    clearDirsForAudioEval()
-
-    midExtension = ".mid"
-
-    synthesize_all(SOURCE_DIR, AUDIO_DIR, prefix="source")
-    # from the source directory, convert all midi files to a monotonic form
-    transformFilesInDir(converters.midi_to_monotonic_midi, SOURCE_DIR, MONOTONIC_DIR, midExtension)
-    # trim to two bars. otherwise, we could get incompatible shapes when running inference
-    trimFunc = lambda sourcePath, outPath: mu.trimMidiFile(sourcePath=sourcePath, outPath=outPath, startBar=0, endBar=2, beatsPerBar=4)
-    transformFilesInDir(trimFunc, MONOTONIC_DIR, MONOTONIC_DIR, midExtension)
-    synthesize_all(MONOTONIC_DIR, AUDIO_DIR, prefix="monotonic")
-
-    # run inference on all monotonic midis
-    inferFunc = lambda sourcePath, outPath: runInferenceOnMonotonicMidi(model, sourcePath, outPath)
-    transformFilesInDir(inferFunc, MONOTONIC_DIR, INFERRED_DIR, midExtension)
-    # need to trim again
-    transformFilesInDir(trimFunc, INFERRED_DIR, INFERRED_DIR, midExtension)
-    synthesize_all(INFERRED_DIR, AUDIO_DIR, prefix="inferred")        
+            continue   
 
 def usage_and_exit():
-    print("Usage: python evaluation.py <eval_type> <modelStartTime> <hypersFile>")
-    print("eval_type: 'audio'")
-    print("modelStartTime: 'used to id the model'")
-    print("hypersFile: 'json file containing hyperparameters'")
+    print("Usage: python evaluation.py <modelStartTime> <hypersFile> <synthesize_up_to> <eval_set_size>")
+    print("modelStartTime: used to id the model")
+    print("hypersFile: json file containing hyperparameters")
+    print("synthesize_up_to: number of audiofiles that will be synthesized")
+    print("eval_set_size: len of eval set (a subset of validation set)")
     sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         usage_and_exit()
     
-    eval_type = sys.argv[1]
-    modelStartTime = int(sys.argv[2])
-    hypersFile = sys.argv[3]
+    clearDir(AUDIO_DIR)
+    
+    modelStartTime = int(sys.argv[1])
+    hypersFile = sys.argv[2]
+    synthesize_up_to = int(sys.argv[3])
+    eval_set_size = int(sys.argv[4])
     hypersPath = f'{HYPERS_DIR}/{hypersFile}'
-    if eval_type == "audio":
-        with open(hypersPath) as hp:
-            hypersDict = json.load(hp)
-            modelPath = getModelPathFromStartTimeAndHypers(modelStartTime, hypersDict)
-            model = loadModel(modelPath, hypersDict)
-            audioEval(model)
-    else:
-        usage_and_exit()
+
+    validation_set = ValidationHvoDataset(source_dir=VALIDATION_SOURCE_DIR)
+
+    with open(hypersPath) as hp:
+        hypersDict = json.load(hp)
+        modelPath = getModelPath(modelStartTime)
+        model = oldLoadModel(modelPath, hypersDict)
+        evaluateModel(model, validation_set, eval_set_size, synthesize_up_to)

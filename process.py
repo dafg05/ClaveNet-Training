@@ -11,7 +11,7 @@ from tqdm import tqdm
 from datetime import datetime
 from constants import *
 
-SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/PreProcessed_On_12_02_2024_at_06_30_hrs"
+SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/PreProcessed_On_15_02_2024_at_16_49_hrs"
 
 def process_subset(subset, metadata, max_len, tappify_params):
     """
@@ -135,12 +135,13 @@ def processing(preprocessed_dir, processed_dir):
         f.write(preprocess_run_name)
     
     for p in partitions:
-        inputs, outputs, _ = process_by_partition(subsets_dir=preprocessed_dir, partition=p, tappify_params=tappify_params)
+        inputs, outputs, hvo_sequences = process_by_partition(subsets_dir=preprocessed_dir, partition=p, tappify_params=tappify_params)
         content = {
             "preprocess_run_name" : preprocess_run_name,
             "processed_time" : processed_time,
             "inputs" : inputs,
             "outputs" : outputs,
+            "hvo_sequences" : hvo_sequences
         }
         filename = f'{out_dir}/{p}.pkl'
         pickle.dump(content, open(filename, 'wb'))

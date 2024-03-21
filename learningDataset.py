@@ -3,10 +3,9 @@ import pandas as pd
 import torch
 
 from torch.utils.data import Dataset
+from constants import *
 
-PROCESSED_DATASETS_DIR = "processedDatasets"
-
-class GrooveHVODataset(Dataset):
+class HvoPairsDataset(Dataset):
     def __init__(self, inputs: np.ndarray, outputs: np.ndarray, dev: str, transform=None, target_transform=None):
         self.dev = dev
         self.hvo_pairs = self.__get_hvo_pairs__(inputs, outputs)
@@ -18,7 +17,7 @@ class GrooveHVODataset(Dataset):
     
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
         """
-        Returns a tuple of (monotonic_hvo, target_hvo), where targer_hvo is the full hvo groove
+        Returns a tuple of (monotonic_hvo, target_hvo), where target_hvo is the full hvo groove
         """
         monotonic_hvo, target_hvo =  self.hvo_pairs[idx]
         if self.transform:
@@ -38,6 +37,3 @@ class GrooveHVODataset(Dataset):
         inputs = torch.FloatTensor(inputs).to(self.dev)
         outputs = torch.FloatTensor(outputs).to(self.dev)
         return list(zip(inputs, outputs))
-
-
-    

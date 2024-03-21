@@ -5,7 +5,6 @@ import numpy as np
     
 class GrooveTransformer(nn.Module):
     def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32, hit_sigmoid_in_forward = False):
-        # TODO: currently testing if it's better to apply sigmoid in forward or just in inference
         super(GrooveTransformer, self).__init__()
 
         self.hit_sigmoid_in_forward = hit_sigmoid_in_forward
@@ -42,7 +41,6 @@ class InputLayer(torch.nn.Module):
         self.posEncoding = PositionalEncoding(d_model, max_len, dropout)
 
     def init_weights(self, initrange=0.1):
-        # TODO: why are we initializing the weights like this?
         self.linearIn.bias.data.zero_()
         self.linearIn.weight.data.uniform_(-initrange, initrange)
 

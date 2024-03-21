@@ -6,3 +6,4 @@ pyfluidsynth
 tqdm
 git+https://github.com/dafg05/processing
 git+https://github.com/dafg05/hvo_sequence
+git+https://github.com/dafg05/grooveEvaluator

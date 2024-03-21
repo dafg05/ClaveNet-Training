@@ -12,3 +12,4 @@ midi/monotonic/*
 midi/source/*
 preprocessedDatasets/*
 processedDatasets/*
+evalResults/*

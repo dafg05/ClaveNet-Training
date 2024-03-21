@@ -6,7 +6,7 @@ import json
 import pickle
 
 from hvoLoss import HVO_Loss, getHitAccuracy
-from dataset import GrooveHVODataset
+from learningDataset import HvoPairsDataset
 from grooveTransformer import GrooveTransformer
 from torch.utils.data import DataLoader
 from datetime import datetime
@@ -14,7 +14,7 @@ from constants import *
 from utils import is_valid_hvo
 
 PROCESSED_DATASETS_DIR = "processedDatasets"
-PROCESSED_TIME = 1707739887
+PROCESSED_TIME = 1708034164
 DATA_DIR = f"{PROCESSED_DATASETS_DIR}/processed_at_{PROCESSED_TIME}"
 
 HIT_SIGMOID_IN_FORWARD = False
@@ -98,7 +98,7 @@ def get_dataloader(data_dir, partition, batch_size, device):
         inputs = content["inputs"]
         outputs = content["outputs"]
 
-        dataset = GrooveHVODataset(inputs=inputs, outputs=outputs, dev=device)
+        dataset = HvoPairsDataset(inputs=inputs, outputs=outputs, dev=device)
         return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
     
 def get_aug_params(data_dir):
