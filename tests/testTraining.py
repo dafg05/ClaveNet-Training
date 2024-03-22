@@ -7,6 +7,8 @@ MODEL_DIR = Path(__file__).parent / 'model_out'
 LOG_WANDB = False
 IS_SMOL = True
 
+# NOTE: The git repo does not contain the processed data, so this test will fail unless you run the processing script and place the output in the appropriate directory
+
 def testTrain():
     # clear the model directory first
     for file in MODEL_DIR.iterdir():
