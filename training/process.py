@@ -12,8 +12,6 @@ from hvo_processing.hvo_sets import HVOSetRetriever
 from tqdm import tqdm
 from datetime import datetime
 
-SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/PreProcessed_On_15_02_2024_at_16_49_hrs"
-
 def process_subset(subset, metadata, max_len, tappify_params):
     """
     Retrieved from: https://github.com/marinaniet0/TransformerGrooveTap2Drum/blob/main/model/dataset.py
@@ -112,7 +110,7 @@ def writeMidiSetToDir(partition, preprocessed_dir, out_dir):
         for idx, midi in enumerate(midi_set):
             saveMidiData(midi, f"{partition}{idx}", out_dir)
 
-def processing(preprocessed_dir, processed_dir):
+def processing(preprocessed_dir: Path, processed_dir: Path):
     """
     Processed train, test, and validation sets. Write them to processedDatasets
     """
@@ -127,12 +125,12 @@ def processing(preprocessed_dir, processed_dir):
 
     # process time meta data goes on out_directory name
     processed_time = int(datetime.now().timestamp())
-    out_dir = f"{processed_dir}/processed_at_{processed_time}"
+    out_dir = processed_dir / f"processed_at_{processed_time}"
     os.mkdir(out_dir)
 
     # preprocess run name goes on a txt file inside the out directory
-    preprocess_run_name = preprocessed_dir.split("/")[-1]
-    with open(f"{out_dir}/preprocessed_run_name.txt", "x") as f:
+    preprocess_run_name = preprocessed_dir.name
+    with open(f"{out_dir}/preprocessed_dataset_name.txt", "x") as f:
         f.write(preprocess_run_name)
     
     for p in partitions:
@@ -149,18 +147,3 @@ def processing(preprocessed_dir, processed_dir):
 
     # copy dataAugParams.json
     shutil.copy(f'{preprocessed_dir}/{DATA_AUG_PARAMS_FILENAME}', f'{out_dir}/{DATA_AUG_PARAMS_FILENAME}')
-    
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python process.py <command>")
-        print("command: 'process' or 'writeMidi'")
-        sys.exit(1)
-    
-    if sys.argv[1] == "process":
-        processing(SUBSETS_DIR, PROCESSED_DATASETS_DIR)
-
-    elif sys.argv[1] == "writeMidi":
-        writeMidiSetToDir('validation', SUBSETS_DIR, SOURCE_DIR)
-
-    

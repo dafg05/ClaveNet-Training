@@ -13,3 +13,5 @@ midi/source/*
 preprocessedDatasets/*
 processedDatasets/*
 evalResults/*
+tests/PreProcessed_On_13_02_2024_at_11_08_hrs/
+tests/processed_out
