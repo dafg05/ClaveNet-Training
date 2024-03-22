@@ -1,8 +1,8 @@
 import torch
 
-from evalDatasets import ValidationHvoDataset, EvaluationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
+from evaluation.evalDatasets import ValidationHvoDataset, EvaluationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
 from constants import MODELS_DIR, SF_PATH
-from grooveTransformer import GrooveTransformer
+from training.grooveTransformer import GrooveTransformer
 
 from hvo_sequence.hvo_seq import HVO_Sequence
 
@@ -13,7 +13,7 @@ HVO_PICKLE = "hvo_sequence_data.obj"
 AUDIO_OUT_DIR = "out/audio/test"
 
 MODEL_PATH = f'{MODELS_DIR}/full_100e_1708034529t.pth'
-MODEL = GrooveTransformer(d_model = 512, nhead = 4, dim_feedforward=16, num_layers=6, pitches=9, time_steps=32, hit_sigmoid_in_forward=False)
+MODEL = GrooveTransformer(d_model = 512, nhead = 4, dim_feedforward=16, num_layers=6, voices=9, time_steps=32, hit_sigmoid_in_forward=False)
 MODEL.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
 
 

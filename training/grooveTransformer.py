@@ -4,15 +4,15 @@ import math
 import numpy as np
     
 class GrooveTransformer(nn.Module):
-    def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, pitches = 9, time_steps = 32, hit_sigmoid_in_forward = False):
+    def __init__(self, d_model=512, nhead=4, num_layers=6, dim_feedforward=128, dropout=0.0, voices = 9, time_steps = 32, hit_sigmoid_in_forward = False):
         super(GrooveTransformer, self).__init__()
 
         self.hit_sigmoid_in_forward = hit_sigmoid_in_forward
         
         # layers
-        self.input = InputLayer(embedding_size=3*pitches, d_model=d_model, dropout=dropout, max_len=time_steps)
+        self.input = InputLayer(embedding_size=3*voices, d_model=d_model, dropout=dropout, max_len=time_steps)
         self.encoder = Encoder(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout, num_encoder_layers=num_layers)
-        self.output = OutputLayer(embedding_size=3 * pitches, d_model=d_model, hit_sigmoid_in_forward=hit_sigmoid_in_forward)
+        self.output = OutputLayer(embedding_size=3 * voices, d_model=d_model, hit_sigmoid_in_forward=hit_sigmoid_in_forward)
 
     def forward(self, src):
         x = self.input(src)
@@ -83,13 +83,11 @@ class OutputLayer(torch.nn.Module):
         self.hit_sigmoid_in_forward = hit_sigmoid_in_forward
 
     def init_weights(self, initrange=0.1):
-        # TODO: why are we initializing the weights like this?
         self.linearOut.bias.data.zero_()
         self.linearOut.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src):
         src = self.linearOut(src)
-        # TODO: test chunking
         chunks = torch.chunk(src, 3, dim=2)
         hits, velocites, offsets = chunks
 

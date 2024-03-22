@@ -4,25 +4,20 @@ import sys
 import os
 import json
 import pickle
+import numpy as np
 
-from hvoLoss import HVO_Loss, getHitAccuracy
-from learningDataset import HvoPairsDataset
-from grooveTransformer import GrooveTransformer
+
+from training.hvoLoss import HVO_Loss, getHitAccuracy
+from training.hvoPairsDataset import HvoPairsDataset
+from training.grooveTransformer import GrooveTransformer
+from training.constants import *
+
 from torch.utils.data import DataLoader
+
 from datetime import datetime
-from constants import *
-from utils import is_valid_hvo
+from pathlib import Path
 
-PROCESSED_DATASETS_DIR = "processedDatasets"
-PROCESSED_TIME = 1708034164
-DATA_DIR = f"{PROCESSED_DATASETS_DIR}/processed_at_{PROCESSED_TIME}"
-
-HIT_SIGMOID_IN_FORWARD = False
-
-LOG_EVERY = 256
-DEBUG = False
-
-def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch):
+def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch, log_wandb):
     model.train()
     for batch, (x, y) in enumerate(dataloader):
         if not (is_valid_hvo(x) and is_valid_hvo(y)):
@@ -47,21 +42,18 @@ def train_loop(dataloader, model, loss_fn, optimizer, grad_clip, epoch):
             total_loss, training_sample = total_loss.item(), batch * len(x)
             training_logging(log_wandb, training_sample, loss_dict, grad_norm, epoch)
 
-def test_loop(dataloader, model, loss_fn, epoch):
+def test_loop(dataloader, model, loss_fn, epoch, log_wandb):
     """
     From pytorch tutorial: https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
     
     For metrics, we use loss and hit_accuracy, where:
     hit_accuracy <- correctly_predicted_hits / total_hits
-
-    TODO:
-    - make hit accuracy its own function, and test it
     """
     
     model.eval() # Set the model to evaluation mode - important for batch normalization and dropout layers
 
     num_batches = len(dataloader)
-    total_hits = num_batches * TIME_STEPS * PITCHES * dataloader.batch_size
+    total_hits = num_batches * TIME_STEPS * VOICES * dataloader.batch_size
 
     test_loss, incorrect_hits = 0, 0
 
@@ -76,8 +68,8 @@ def test_loop(dataloader, model, loss_fn, epoch):
         loss_dict = loss_fn(pred, y)
         test_loss += sum(loss_dict.values()).item()
         
-        h_pred = pred[:, :, :PITCHES]
-        h_y = y[:, :, :PITCHES]
+        h_pred = pred[:, :, :VOICES]
+        h_y = y[:, :, :VOICES]
         incorrect_hits += torch.sum(torch.abs(h_pred - h_y))
 
     assert incorrect_hits.item().is_integer(), "incorrect_hits is not an integer!"
@@ -103,7 +95,7 @@ def get_dataloader(data_dir, partition, batch_size, device):
     
 def get_aug_params(data_dir):
     # open dataAugParams.json file at data_dir, return as dict
-    with open(f"{data_dir}/{DATA_AUG_PARAMS}") as file:
+    with open(f"{data_dir}/{DATA_AUG_PARAMS_FILENAME}") as file:
         return json.load(file)
 
 def format_aug_params(jsonDict: dict):
@@ -122,41 +114,14 @@ def format_aug_params(jsonDict: dict):
         print(f"DataAugParam {e} not found in jsonDict!")
         return None, None, None, None, None, None
     
-def wandb_init():
-    wandb.login() 
-    run = wandb.init(
-        # Set the project where this run will be logged
-        project=project_name,
-        # Track hyperparameters and run metadata
-        config={
-            "start_time" : start_time,
-            "torch_seed": torch_seed,
-            "epochs": epochs,
-            "traning_data_size": len(train_loader.dataset),
-            "test_data_size": len(test_loader.dataset),
-            "batch_size": batch_size,
-            "d_model": d_model,
-            "dim_forward": dim_forward,
-            "n_heads": n_heads,
-            "n_layers": n_layers,
-            "dropout": dropout,
-            "learning_rate": learning_rate,
-            "loss_penalty": loss_penalty,
-            "grad_clip": grad_clip,
-            "data_processed_time": processed_time,
-            "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD,
-            "augmentation_seed": augSeed,
-            "seed_examples_set": seedExamplesSet,
-            "num_transformations": numTransformations,
-            "num_replacements": numReplacements,
-            "preferred_style": preferredStyle,
-            "out_of_style_prob": outOfStyleProb,
-    })
-
-    # plotting test loss
-    wandb.define_metric("epoch")
-    wandb.define_metric("test_loss", step_metric="epoch")
-    wandb.define_metric("hit_accuracy", step_metric="epoch")
+def get_dataset_processed_time(processed_dataset_path: Path) -> int:
+    raise NotImplementedError
+    
+def is_valid_hvo(hvo: np.ndarray) -> bool:
+    """
+    Check for nans and infs in hvo
+    """
+    return (torch.isnan(hvo).any() == False) and (torch.isinf(hvo).any() == False)
 
 def training_logging(logWandb, training_sample, loss_dict, grad_norm, epoch):
     training_loss = sum(loss_dict.values())
@@ -189,52 +154,19 @@ def test_logging(logWandb, test_loss, hit_accuracy, epoch):
         print(f"hit_accuracy: {hit_accuracy:>7f} epoch: {epoch:>7f}")
         print("-----------------------------------")
 
-# USAGE
-
-def usage():
-    print("Usage: python train.py <size> <log_location> <paramFileName")
-    print("smol: 'smol' or 'full'")
-    print("log_location: 'wandb' or 'local'")
-    print("paramFilename: 'file name that contains hyperparameters")
-
 # MAIN
 
-if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        usage()
-        sys.exit(1)
-    if sys.argv[1] == "smol":
-        smol = True
-    elif sys.argv[1] == "full":
-        smol = False
-    else:
-        usage()
-        sys.exit(1)
-
-    if sys.argv[2] == "wandb":
-        log_wandb = True
-    elif sys.argv[2] == "local":
-        log_wandb = False
-    else:
-        usage()
-        sys.exit(1)
-
-    hypersPath = f"{HYPERS_DIR}/{sys.argv[3]}"
-    if not os.path.exists(hypersPath):
-        print(f"Error: {hypersPath} does not exist!")
-        sys.exit(1)
-
-    # some metadata
-    torch_seed = TORCH_SEED
-    processed_time = PROCESSED_TIME
+def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir: Path, log_wandb: bool, is_smol: bool, debug=False):
 
     # load hyperparameters
+    hyperparams_filename = f'{hyperparams_setting}.json'
+    hypersPath = HYPERS_DIR / hyperparams_filename
     with open(hypersPath) as hp:
         hypersDict = json.load(hp)
-
+    
     # TODO: make object for hyperparameters
     batch_size = hypersDict["batch_size"]
-    d_model = 8 if smol else hypersDict["d_model"]
+    d_model = 8 if is_smol else hypersDict["d_model"]
     dim_forward = hypersDict["dim_forward"]
     n_heads = hypersDict["n_heads"]
     n_layers = hypersDict["n_layers"]
@@ -242,14 +174,15 @@ if __name__ == "__main__":
     learning_rate = hypersDict["learning_rate"]
     loss_penalty = hypersDict["loss_penalty"] # applied to velocites and offset values that occur in non-hit locations
     grad_clip = hypersDict["grad_clip"]
-    epochs = 1 if smol else hypersDict["epochs"]
+    epochs = 1 if is_smol else hypersDict["epochs"]
 
     # load data augmentation parameters
-    augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb = format_aug_params(get_aug_params(DATA_DIR))
-
+    augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb = format_aug_params(get_aug_params(processed_dataset_path))
+    
     # torch options
+    torch_seed = TORCH_SEED
     torch.manual_seed(torch_seed)
-    torch.autograd.set_detect_anomaly(DEBUG)
+    torch.autograd.set_detect_anomaly(debug)
 
     # device
     device = (
@@ -259,27 +192,60 @@ if __name__ == "__main__":
         if torch.backends.mps.is_available()
         else "cpu"
     )
-    print(f"Using {device} device")
+    print(f"Using {device} device.")
 
     # data loading
-    print(f"Loading data from {DATA_DIR} using augmentation: {augSeed is not None}")
+    print(f"Loading data from {processed_dataset_path}")
     try:
         partition = "train"
-        train_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
+        train_loader = get_dataloader(data_dir=processed_dataset_path, partition=partition, batch_size=batch_size, device=device)
         partition = "test"
-        test_loader = get_dataloader(data_dir=DATA_DIR, partition=partition, batch_size=batch_size, device=device)
+        test_loader = get_dataloader(data_dir=processed_dataset_path, partition=partition, batch_size=batch_size, device=device)
 
         print(f"Loaded {len(train_loader.dataset)} train examples and {len(test_loader.dataset)} test examples")
     except Exception as e:
-        raise Exception(f"Error loading {partition} data from dir: {DATA_DIR}: {e}")
+        raise Exception(f"Error loading {partition} data from dir: {processed_dataset_path}: {e}")
     
     # training visualization and logging
+    def wandb_init():
+        wandb.login() 
+        run = wandb.init(
+            # Set the project where this run will be logged
+            project=PROJECT_NAME,
+            # Track hyperparameters and run metadata
+            config={
+                "training_start_time" : training_start_time,
+                "torch_seed": torch_seed,
+                "epochs": epochs,
+                "traning_data_size": len(train_loader.dataset),
+                "test_data_size": len(test_loader.dataset),
+                "batch_size": batch_size,
+                "d_model": d_model,
+                "dim_forward": dim_forward,
+                "n_heads": n_heads,
+                "n_layers": n_layers,
+                "dropout": dropout,
+                "learning_rate": learning_rate,
+                "loss_penalty": loss_penalty,
+                "grad_clip": grad_clip,
+                "dataset_processed_time": dataset_processed_time,
+                "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD,
+                "augmentation_seed": augSeed,
+                "seed_examples_set": seedExamplesSet,
+                "num_transformations": numTransformations,
+                "num_replacements": numReplacements,
+                "preferred_style": preferredStyle,
+                "out_of_style_prob": outOfStyleProb,
+        })
+
+    # plotting test loss
+    wandb.define_metric("epoch")
+    wandb.define_metric("test_loss", step_metric="epoch")
+    wandb.define_metric("hit_accuracy", step_metric="epoch")
+
     torch.set_printoptions(threshold=10000)
-    project_name = "MGT-local"
-
-     # record run startTime
-    start_time = int(datetime.now().timestamp())
-
+    dataset_processed_time = get_dataset_processed_time(processed_dataset_path)
+    training_start_time = int(datetime.now().timestamp())
     if log_wandb:
         wandb_init()
 
@@ -295,17 +261,15 @@ if __name__ == "__main__":
     for e in range(epochs):
         epoch = e + 1
         print(f"Epoch {epoch}\n-------------------------------")
-        train_loop(train_loader, model, loss_fn, optimizer, grad_clip, epoch)
-        test_loop(test_loader, model, loss_fn, epoch)
+        train_loop(train_loader, model, loss_fn, optimizer, grad_clip, epoch, log_wandb)
+        test_loop(test_loader, model, loss_fn, epoch, log_wandb)
         print("-------------------------------")
-
-
+    
     # save model
     print("Saving model...")
+    model_prefix = "smol" if is_smol else "full"
+    model_filename = f'{model_prefix}_{hyperparams_setting}_{training_start_time}.pth'
+    model_path = out_model_dir / model_filename
 
-    model_prefix = "smol" if smol else "full"
-    modelSuffix = f"{epochs}e_{start_time}t"
-    modelName = f"{model_prefix}_{modelSuffix}"
-
-    torch.save(model.state_dict(), f"{MODELS_DIR}/{modelName}.pth")
-    print(f"Saved model {modelName} in {MODELS_DIR}!")
+    torch.save(model.state_dict(), out_model_dir / model_filename)
+    print(f'Saved model at {model_path}')

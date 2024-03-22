@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from torch import nn
-from hvoLoss import HVO_Loss, getHitAccuracy
+from training.hvoLoss import HVO_Loss, getHitAccuracy
 
 SEED = 0
 STEPS = 32
@@ -119,7 +119,7 @@ def compareLosses(pred, target):
         print("SUCCESS!!! Losses are equal.")
         print(f"Paper total loss: {paper_total_loss}, My total Loss: {my_total_loss}, Paper hits loss: {paper_hits_loss}, My hits loss: {my_hits_loss}")
     else:
-        print("WEHHH. Losses are not equal.")
+        print("Losses are not equal.")
         print(f"Paper total loss: {paper_total_loss}, My total Loss: {my_total_loss}, Paper hits loss: {paper_hits_loss}, My hits loss: {my_hits_loss}")
 
 def compareAccuracies(pred, target):
@@ -130,7 +130,7 @@ def compareAccuracies(pred, target):
         print("SUCCESS!!! Accuracies are equal.")
         print(f"Paper accuracy: {paper_accuracy}, My accuracy: {my_accuracy}")
     else:
-        print("WEHHH. Accuracies are not equal.")
+        print("Accuracies are not equal.")
         print(f"Paper accuracy: {paper_accuracy}, My accuracy: {my_accuracy}")
 
 if __name__ == "__main__":

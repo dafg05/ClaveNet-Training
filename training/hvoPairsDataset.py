@@ -3,7 +3,6 @@ import pandas as pd
 import torch
 
 from torch.utils.data import Dataset
-from constants import *
 
 class HvoPairsDataset(Dataset):
     def __init__(self, inputs: np.ndarray, outputs: np.ndarray, dev: str, transform=None, target_transform=None):

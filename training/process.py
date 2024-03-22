@@ -5,11 +5,12 @@ import mido
 import sys
 import shutil
 
+from training.constants import *
+
 from hvo_sequence.drum_mappings import ROLAND_REDUCED_MAPPING
 from hvo_processing.hvo_sets import HVOSetRetriever
 from tqdm import tqdm
 from datetime import datetime
-from constants import *
 
 SUBSETS_DIR = PREPROCESSED_DATASETS_DIR + "/PreProcessed_On_15_02_2024_at_16_49_hrs"
 
@@ -147,7 +148,7 @@ def processing(preprocessed_dir, processed_dir):
         pickle.dump(content, open(filename, 'wb'))
 
     # copy dataAugParams.json
-    shutil.copy(f'{preprocessed_dir}/{DATA_AUG_PARAMS}', f'{out_dir}/{DATA_AUG_PARAMS}')
+    shutil.copy(f'{preprocessed_dir}/{DATA_AUG_PARAMS_FILENAME}', f'{out_dir}/{DATA_AUG_PARAMS_FILENAME}')
     
 
 if __name__ == "__main__":

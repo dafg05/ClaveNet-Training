@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from copy import deepcopy
-from grooveTransformer import GrooveTransformer
+from training.grooveTransformer import GrooveTransformer
 
 from torch.utils.data import Dataset
 from hvo_sequence.hvo_seq import HVO_Sequence

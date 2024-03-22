@@ -5,9 +5,9 @@ import pickle
 from datetime import datetime
 from pathlib import Path
 
-from grooveTransformer import GrooveTransformer as GT
+from training.grooveTransformer import GrooveTransformer as GT
 import grooveEvaluator.relativeComparison as rc
-from evalDatasets import *
+from evaluation.evalDatasets import *
 from constants import *
 
 VALIDATION_SOURCE_DIR = f'{PREPROCESSED_DATASETS_DIR}/PreProcessed_On_15_02_2024_at_16_49_hrs'
@@ -56,7 +56,7 @@ def oldLoadModel(modelPath: str, hypersDict: dict) -> GT:
     n_heads = hypersDict["n_heads"]
     n_layers = hypersDict["n_layers"]
     
-    model = GT(d_model=d_model, nhead = n_heads, dim_feedforward=dim_forward, num_layers=n_layers, pitches=9)
+    model = GT(d_model=d_model, nhead = n_heads, dim_feedforward=dim_forward, num_layers=n_layers, voices=9)
     model.load_state_dict(torch.load(modelPath, map_location=torch.device('cpu')))
     return model
 
@@ -81,7 +81,7 @@ def loadModel(model_path: Path) -> GT:
     n_layers = int(hyperparams[3])
     pitches = int(hyperparams[4])
     
-    model = GT(d_model=d_model, nhead=n_heads, dim_feedforward=dim_forward, num_layers=n_layers, pitches=pitches)
+    model = GT(d_model=d_model, nhead=n_heads, dim_feedforward=dim_forward, num_layers=n_layers, voices=pitches)
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 
     return model
