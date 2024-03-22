@@ -73,17 +73,23 @@ def loadModel(model_path: Path) -> GT:
     """
     Loads model from its path
     """
-    hyperparams = model_path.name.split('_')
+    is_smol = model_path.name.split('_')[0] == 'smol'
 
-    d_model = int(hyperparams[0])
-    dim_forward = int(hyperparams[1])
-    n_heads = int(hyperparams[2])
-    n_layers = int(hyperparams[3])
-    pitches = int(hyperparams[4])
-    
-    model = GT(d_model=d_model, nhead=n_heads, dim_feedforward=dim_forward, num_layers=n_layers, voices=pitches)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    hyperparams_setting = model_path.name.split('_')[1]
+    hyperparams_filename = f'{hyperparams_setting}.json'
+    hypersPath = HYPERS_DIR / hyperparams_filename
 
+    with open(hypersPath) as hp:
+        hypersDict = json.load(hp)
+
+    d_model = 8 if is_smol else hypersDict["d_model"]
+    dim_forward = hypersDict["dim_forward"]
+    n_heads = hypersDict["n_heads"]
+    n_layers = hypersDict["n_layers"]
+    dropout = hypersDict["dropout"]
+
+    model = GT(d_model=d_model, nhead = n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout, voices=9)
+    model.load_state_dict(torch.load(modelPath, map_location=torch.device('cpu')))
     return model
 
 def clearDir(dir):

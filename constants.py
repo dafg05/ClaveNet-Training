@@ -14,7 +14,3 @@ SOURCE_DIR = MIDI_DIR + "/source"
 
 PROCESSED_DATASETS_DIR = "processedDatasets"
 PREPROCESSED_DATASETS_DIR = "preprocessedDatasets"
-
-VALIDATION_SUBSET = "GrooveMIDI_processed_validation"
-
-SF_PATH = "soundfonts/Standard_Drum_Kit.sf2"

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-HYPERS_DIR = Path()
+HYPERS_DIR = Path(__file__).parent.parent / 'hypers'
 TORCH_SEED = 42
 PROJECT_NAME = 'MGT-local'
 DATA_AUG_PARAMS_FILENAME = "dataAugParams.json"

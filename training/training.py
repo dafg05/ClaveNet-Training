@@ -115,7 +115,9 @@ def format_aug_params(jsonDict: dict):
         return None, None, None, None, None, None
     
 def get_dataset_processed_time(processed_dataset_path: Path) -> int:
-    raise NotImplementedError
+    processed_time = int(processed_dataset_path.name.split("_")[-1])
+    return processed_time
+
     
 def is_valid_hvo(hvo: np.ndarray) -> bool:
     """
@@ -238,10 +240,10 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
                 "out_of_style_prob": outOfStyleProb,
         })
 
-    # plotting test loss
-    wandb.define_metric("epoch")
-    wandb.define_metric("test_loss", step_metric="epoch")
-    wandb.define_metric("hit_accuracy", step_metric="epoch")
+        # plotting test loss
+        wandb.define_metric("epoch")
+        wandb.define_metric("test_loss", step_metric="epoch")
+        wandb.define_metric("hit_accuracy", step_metric="epoch")
 
     torch.set_printoptions(threshold=10000)
     dataset_processed_time = get_dataset_processed_time(processed_dataset_path)

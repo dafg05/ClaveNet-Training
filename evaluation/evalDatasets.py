@@ -9,9 +9,7 @@ from training.grooveTransformer import GrooveTransformer
 
 from torch.utils.data import Dataset
 from hvo_sequence.hvo_seq import HVO_Sequence
-from constants import *
-
-RANDOM_SEED = 42
+from evaluation.constants import *
 
 class ValidationHvoDataset(Dataset):
     """
