@@ -4,6 +4,7 @@ __pycache__
 .vscode
 wandb
 learningVenv
+venv
 models/*
 processedData/*
 out/*
