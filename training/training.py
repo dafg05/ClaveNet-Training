@@ -103,16 +103,15 @@ def format_aug_params(jsonDict: dict):
     If the params file contains all the necessary keys, return a tuple of the values. Otherwise, return None
     """
     try:
-        augSeed = jsonDict["seed"]
-        seedExamplesSet = jsonDict["seedExamplesSet"]
-        numTransformations = jsonDict["numTransformations"]
-        numReplacements = jsonDict["numReplacements"]
-        preferredStyle = jsonDict["preferredStyle"]
-        outOfStyleProb = jsonDict["outOfStyleProb"]
-        return augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb
+        augSeed = jsonDict["random_seed"]
+        seedExamplesSets = jsonDict["seed_examples_sets"]
+        numTransformations = jsonDict["num_transformations"]
+        numReplacements = jsonDict["num_replacements"]
+        outOfStyleProb = jsonDict["out_of_style_prob"]
+        return augSeed, seedExamplesSets, numTransformations, numReplacements, outOfStyleProb
     except KeyError as e:
         print(f"DataAugParam {e} not found in jsonDict!")
-        return None, None, None, None, None, None
+        return None, None, None, None, None
     
 def get_dataset_processed_time(processed_dataset_path: Path) -> int:
     processed_time = int(processed_dataset_path.name.split("_")[-1])
@@ -179,7 +178,7 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
     epochs = 1 if is_smol else hypersDict["epochs"]
 
     # load data augmentation parameters
-    augSeed, seedExamplesSet, numTransformations, numReplacements, preferredStyle, outOfStyleProb = format_aug_params(get_aug_params(processed_dataset_path))
+    augSeed, seedExamplesSets, numTransformations, numReplacements, outOfStyleProb = format_aug_params(get_aug_params(processed_dataset_path))
     
     # torch options
     torch_seed = TORCH_SEED
@@ -233,10 +232,9 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
                 "dataset_processed_time": dataset_processed_time,
                 "hit_sigmoid_in_forward": HIT_SIGMOID_IN_FORWARD,
                 "augmentation_seed": augSeed,
-                "seed_examples_set": seedExamplesSet,
+                "seed_examples_sets": seedExamplesSets,
                 "num_transformations": numTransformations,
                 "num_replacements": numReplacements,
-                "preferred_style": preferredStyle,
                 "out_of_style_prob": outOfStyleProb,
         })
 
