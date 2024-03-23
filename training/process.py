@@ -147,3 +147,5 @@ def processing(preprocessed_dir: Path, processed_dir: Path):
 
     # copy dataAugParams.json
     shutil.copy(f'{preprocessed_dir}/{DATA_AUG_PARAMS_FILENAME}', f'{out_dir}/{DATA_AUG_PARAMS_FILENAME}')
+
+    return out_dir

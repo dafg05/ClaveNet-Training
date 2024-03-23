@@ -15,8 +15,8 @@ def testProcessing():
                 subfile.unlink()
             file.rmdir()
 
-    process.processing(PREPROCESSED_DIR, PROCESSED_DIR)
-    print(f"Check {PROCESSED_DIR} for test results")
+    processed_dataset_path = process.processing(PREPROCESSED_DIR, PROCESSED_DIR)
+    print(f"Processing complete. Check {processed_dataset_path} for results.")
 
 if __name__ == "__main__":
     testProcessing()

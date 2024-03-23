@@ -18,8 +18,8 @@ def testTrain():
                 subfile.unlink()
             file.rmdir()
     
-    training.train(HYPERPARAMS_SETTING, PROCESSED_DATASET_PATH, MODEL_DIR, LOG_WANDB, IS_SMOL)
-    print(f"Check {MODEL_DIR} for test results")
+    model_path = training.train(HYPERPARAMS_SETTING, PROCESSED_DATASET_PATH, MODEL_DIR, LOG_WANDB, IS_SMOL)
+    print(f"Training complete. Check {model_path} for results.")
 
 if __name__ == "__main__":
     testTrain()

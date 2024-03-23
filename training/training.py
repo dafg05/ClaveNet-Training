@@ -275,3 +275,5 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
 
     torch.save(model.state_dict(), out_model_dir / model_filename)
     print(f'Saved model at {model_path}')
+
+    return model_path
