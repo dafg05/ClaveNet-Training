@@ -7,10 +7,10 @@ import pickle
 import numpy as np
 
 
-from training.hvoLoss import HVO_Loss, getHitAccuracy
-from training.hvoPairsDataset import HvoPairsDataset
-from training.grooveTransformer import GrooveTransformer
-from training.constants import *
+from .hvoLoss import HVO_Loss, getHitAccuracy
+from .hvoPairsDataset import HvoPairsDataset
+from .grooveTransformer import GrooveTransformer
+from .constants import *
 
 from torch.utils.data import DataLoader
 

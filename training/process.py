@@ -5,7 +5,7 @@ import mido
 import sys
 import shutil
 
-from training.constants import *
+from .constants import *
 
 from hvo_sequence.drum_mappings import ROLAND_REDUCED_MAPPING
 from hvo_processing.hvo_sets import HVOSetRetriever
