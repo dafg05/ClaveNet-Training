@@ -6,7 +6,6 @@ import json
 import pickle
 import numpy as np
 
-
 from .hvoLoss import HVO_Loss, getHitAccuracy
 from .hvoPairsDataset import HvoPairsDataset
 from .grooveTransformer import GrooveTransformer
@@ -218,7 +217,7 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
                 "training_start_time" : training_start_time,
                 "torch_seed": torch_seed,
                 "epochs": epochs,
-                "traning_data_size": len(train_loader.dataset),
+                "training_data_size": len(train_loader.dataset),
                 "test_data_size": len(test_loader.dataset),
                 "batch_size": batch_size,
                 "d_model": d_model,
@@ -273,5 +272,9 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
 
     torch.save(model.state_dict(), out_model_dir / model_filename)
     print(f'Saved model at {model_path}')
+
+    if log_wandb:
+        wandb.save(str(model_path))
+        wandb.finish()
 
     return model_path
