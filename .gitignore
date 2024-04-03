@@ -16,6 +16,8 @@ processedDatasets/*
 evalResults/*
 
 tests/PreProcessed_On_21_03_2024_at_17_38_hrs
+tests/AfroCuban_Validation_PreProcessed_On_03_04_2024_at_01_04_hrs
 tests/processed_out
 tests/model_out
 tests/processed_at_1711223657/
+tests/evaluation_out

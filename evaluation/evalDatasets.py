@@ -1,6 +1,5 @@
 import os
 import pickle
-import random
 import numpy as np
 import pandas as pd
 import torch
@@ -17,10 +16,10 @@ class ValidationHvoDataset(Dataset):
     """
 
     def __init__(self, source_dir, metadata_csv='metadata.csv', hvo_pickle='hvo_sequence_data.obj',max_len=32):
-        data_file = open(os.path.join(source_dir, VALIDATION_SUBSET, hvo_pickle), 'rb')
+        data_file = open(os.path.join(source_dir, hvo_pickle), 'rb')
         dataset = pickle.load(data_file)
 
-        metadata = pd.read_csv(os.path.join(source_dir, VALIDATION_SUBSET, metadata_csv))
+        metadata = pd.read_csv(os.path.join(source_dir, metadata_csv))
         self.hvo_sequences = self.__populate_hvo_sequences(dataset, metadata, max_len)
 
     def __len__(self):
@@ -47,44 +46,17 @@ class ValidationHvoDataset(Dataset):
                     hvo_seq.hvo = np.pad(hvo_seq.hvo, ((0, pad_count), (0, 0)), 'constant')
                     hvo_seq.hvo = hvo_seq.hvo [:max_len, :]         # In case, sequence exceeds max_len
                     hvo_sequences.append(hvo_seq)
-        return hvo_sequences   
-
-class EvaluationHvoDataset(Dataset):
-    """
-    A subset of a validation data set.
-    """
-
-    def __init__(self, validationHvoDataset: ValidationHvoDataset, eval_set_size: int, seed: int=RANDOM_SEED):
-        self.seed = seed
-        self.eval_sequences, self.selectedIndices = self.__populate_eval_sequences(validationHvoDataset, eval_set_size)
-
-    def __len__(self):
-        return len(self.eval_sequences)
-    
-    def __getitem__(self, idx) -> HVO_Sequence:
-        return self.eval_sequences[idx]
-
-    def __populate_eval_sequences(self, validationHvoDataset, eval_set_size):
-        random.seed(self.seed)
-        selectedIndices = random.sample(range(len(validationHvoDataset)), eval_set_size)
-        selectedIndices.sort()
-        eval_sequences = []
-        for ix in selectedIndices:
-            eval_sequences.append(validationHvoDataset[ix])
-
-        return eval_sequences, selectedIndices
+        return hvo_sequences 
 
 class MonotonicHvoDataset(Dataset):
-    def __init__(self, evaluationHvoDataset: EvaluationHvoDataset):
-        self.monotonic_sequences = self.__populate_monotonic_sequences(evaluationHvoDataset)
+    def __init__(self, validationHvoDataset: ValidationHvoDataset):
+        self.monotonic_sequences = self.__populate_monotonic_sequences(validationHvoDataset)
 
-    def __populate_monotonic_sequences(self, evaluationHvoDataset: EvaluationHvoDataset):
+    def __populate_monotonic_sequences(self, validationHvoDataset: ValidationHvoDataset):
         monotonic_sequences = []
-        for hvo_seq in evaluationHvoDataset:
+        for hvo_seq in validationHvoDataset:
             monotonic_seq = deepcopy(hvo_seq)
-            # TODO: can we access hvos like this?
             monotonic_seq.hvo = monotonic_seq.flatten_voices()
-
             monotonic_sequences.append(monotonic_seq)
         
         return monotonic_sequences
@@ -104,7 +76,6 @@ class GeneratedHvoDataset(Dataset):
         generated_sequences = []
         for monotonic_seq in monotonicHvoDataset:
             generated_seq = deepcopy(monotonic_seq)
-            # TODO: can we access hvos like this?
             hvoArray = self.__pad_hvo_timesteps(monotonic_seq.hvo, time_steps=32)
             hvoTensor = torch.from_numpy(hvoArray).float()
 

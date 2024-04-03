@@ -1,60 +1,56 @@
 import torch
+from pathlib import Path
 
-from evaluation.evalDatasets import ValidationHvoDataset, EvaluationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
-from constants import MODELS_DIR, SF_PATH
+from evaluation.evalDatasets import ValidationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
+from evaluation.constants import SF_PATH
 from training.grooveTransformer import GrooveTransformer
 
 from hvo_sequence.hvo_seq import HVO_Sequence
 
-SOURCE_DIR = "preprocessedDatasets/PreProcessed_On_15_02_2024_at_16_49_hrs"
-EVAL_SET_SIZE = 4
-METADATA_CSV = "metadata.csv"
-HVO_PICKLE = "hvo_sequence_data.obj"
-AUDIO_OUT_DIR = "out/audio/test"
+# Validation set path
+SOURCE_DIR = Path('tests', 'AfroCuban_Validation_PreProcessed_On_03_04_2024_at_01_04_hrs')
 
-MODEL_PATH = f'{MODELS_DIR}/full_100e_1708034529t.pth'
-MODEL = GrooveTransformer(d_model = 512, nhead = 4, dim_feedforward=16, num_layers=6, voices=9, time_steps=32, hit_sigmoid_in_forward=False)
+# Load model
+MODEL_PATH = Path('tests', 'smol_solar-shadow_1711138656.pth')
+MODEL = GrooveTransformer(d_model = 8, nhead = 4, num_layers=11, dim_feedforward=16, dropout=0.1594, voices=9, time_steps=32, hit_sigmoid_in_forward=False)
 MODEL.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
 
+AUDIO_OUT_DIR = Path('tests','datasets_out')
+SUBSET_SIZE = 4
 
 def testEvalDatasets():
-    validation_set = ValidationHvoDataset(SOURCE_DIR, METADATA_CSV, HVO_PICKLE)
+    validation_set = ValidationHvoDataset(SOURCE_DIR)
     
-    for validation_seq in validation_set:
+    # check if validation set is valid
+    for i in range(len(validation_set)):
+        validation_seq = validation_set[i]
         assert validation_seq.hvo.shape == (32, 27), f"Validation hvo shape is invalid: {validation_seq.hvo.shape}"
+        filename = f"{AUDIO_OUT_DIR}/valid_{validation_seq.master_id}.wav"
+        validation_seq.save_audio(filename=filename, sf_path=SF_PATH)
     print("validation set looking good")
 
-    eval_set = EvaluationHvoDataset(validation_set, EVAL_SET_SIZE)
-    # check if eval set is valid
-    assert len(eval_set) == EVAL_SET_SIZE
-    assert len(eval_set.selectedIndices) == EVAL_SET_SIZE
-    for eval_seq in eval_set:
-        assert eval_seq.hvo.shape == (32, 27), f"Eval hvo shape is invalid: {eval_seq.hvo.shape}"
-    # synthesize
-    eval_set[0].save_audio(filename=f"{AUDIO_OUT_DIR}/eval_audio.wav", sf_path=SF_PATH)
-
-    print("eval set looking good")
-
-    monotonic_set = MonotonicHvoDataset(eval_set)
+    monotonic_set = MonotonicHvoDataset(validation_set)
     # check if monotonic set is valid
-    assert len(monotonic_set) == EVAL_SET_SIZE
-    assert monotonic_set[0].master_id == eval_set[0].master_id
-    assert monotonic_set[0].style_primary == eval_set[0].style_primary
-    for monotonic_seq in monotonic_set:
+    assert len(monotonic_set) == len(validation_set)
+    assert monotonic_set[0].master_id == validation_set[0].master_id
+    assert monotonic_set[0].style_primary == validation_set[0].style_primary
+    for i in range(SUBSET_SIZE):
+        monotonic_seq = monotonic_set[i]
         assert monotonic_seq.hvo.shape == (32, 27), f"Monotonic hvo shape is invalid: {monotonic_seq.hvo.shape}"
-    # synthesize
-    monotonic_set[0].save_audio(filename=f"{AUDIO_OUT_DIR}/monotonic_audio.wav", sf_path=SF_PATH)
+        filename = f"{AUDIO_OUT_DIR}/monotonic_{monotonic_seq.master_id}.wav"
+        monotonic_seq.save_audio(filename=filename, sf_path=SF_PATH)
     print("monotonic set looking good")
 
     generated_set = GeneratedHvoDataset(monotonic_set, MODEL)
     # check if generated set is valid
-    assert len(generated_set) == EVAL_SET_SIZE
-    assert generated_set[0].master_id == eval_set[0].master_id
-    assert generated_set[0].style_primary == eval_set[0].style_primary
-    for generated_seq in generated_set:
+    assert len(generated_set) == len(monotonic_set)
+    assert generated_set[0].master_id == monotonic_set[0].master_id
+    assert generated_set[0].style_primary == monotonic_set[0].style_primary
+    for i in range(SUBSET_SIZE):
+        generated_seq = generated_set[i]
         assert generated_seq.hvo.shape == (32, 27), f"Generated hvo shape is invalid: {generated_seq.hvo.shape}"
-    # synthesize
-    generated_set[0].save_audio(filename=f"{AUDIO_OUT_DIR}/generated_audio.wav", sf_path=SF_PATH)
+        filename = f"{AUDIO_OUT_DIR}/generated_{generated_seq.master_id}.wav"
+        generated_seq.save_audio(filename=filename, sf_path=SF_PATH)
     print("generated set looking good")
 
     print("All sets looking good")
