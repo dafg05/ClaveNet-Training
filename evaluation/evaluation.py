@@ -48,7 +48,7 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, sy
     results_path = evaluation_dir / 'results'
     pickle.dump(comparison_result_by_feat, open(results_path, 'wb'))
 
-    return evaluation_time
+    return evaluation_dir
 
 def loadModel(model_path: Path) -> GT:
     """
