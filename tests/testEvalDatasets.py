@@ -1,25 +1,22 @@
 import torch
 from pathlib import Path
-
-from evaluation.evalDatasets import ValidationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
-from evaluation.constants import SF_PATH
-from training.grooveTransformer import GrooveTransformer
-
 from hvo_sequence.hvo_seq import HVO_Sequence
 
-# Validation set path
-SOURCE_DIR = Path('tests', 'AfroCuban_Validation_PreProcessed_On_03_04_2024_at_01_04_hrs')
+from ..evaluation.evalDatasets import ValidationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
+from ..evaluation.constants import SF_PATH
+from ..training.grooveTransformer import GrooveTransformer
+from .constants import TEST_DATA_DIR, MODEL_PATH, VALIDATION_SET_PATH
+
+AUDIO_OUT_DIR = TEST_DATA_DIR / 'datasets_out'
 
 # Load model
-MODEL_PATH = Path('tests', 'smol_solar-shadow_1711138656.pth')
 MODEL = GrooveTransformer(d_model = 8, nhead = 4, num_layers=11, dim_feedforward=16, dropout=0.1594, voices=9, time_steps=32, hit_sigmoid_in_forward=False)
 MODEL.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
 
-AUDIO_OUT_DIR = Path('tests','datasets_out')
 SUBSET_SIZE = 4
 
 def testEvalDatasets():
-    validation_set = ValidationHvoDataset(SOURCE_DIR)
+    validation_set = ValidationHvoDataset(VALIDATION_SET_PATH)
     
     # check if validation set is valid
     for i in range(len(validation_set)):

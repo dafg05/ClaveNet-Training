@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import torch
 from copy import deepcopy
-from training.grooveTransformer import GrooveTransformer
+
+from ..training.grooveTransformer import GrooveTransformer
+from .constants import *
 
 from torch.utils.data import Dataset
 from hvo_sequence.hvo_seq import HVO_Sequence
-from evaluation.constants import *
 
 class ValidationHvoDataset(Dataset):
     """

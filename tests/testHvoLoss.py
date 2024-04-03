@@ -1,8 +1,8 @@
 import torch
 import numpy as np
-
 from torch import nn
-from training.hvoLoss import HVO_Loss, getHitAccuracy
+
+from ..training.hvoLoss import HVO_Loss, getHitAccuracy
 
 SEED = 0
 STEPS = 32

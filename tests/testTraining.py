@@ -1,16 +1,16 @@
-import training.training as training
+from ..training import training
+from .constants import TEST_DATA_DIR, PROCESSED_DATASET_PATH
 from pathlib import Path
 
+MODEL_OUT = TEST_DATA_DIR / 'model_out'
+
 HYPERPARAMS_SETTING = 'solar-shadow'
-PROCESSED_DATASET_PATH = Path(__file__).parent / 'processed_at_1711223657'
-# NOTE: The git repo does not contain the processed data, so this test will fail unless you run the processing script and place the output in the appropriate directory
-MODEL_DIR = Path(__file__).parent / 'model_out'
-LOG_WANDB = True
+LOG_WANDB = False
 IS_SMOL = True
 
 def testTrain():
     # clear the model directory first
-    for file in MODEL_DIR.iterdir():
+    for file in MODEL_OUT.iterdir():
         if file.is_file():
             file.unlink()
         else:
@@ -18,7 +18,7 @@ def testTrain():
                 subfile.unlink()
             file.rmdir()
     
-    model_path = training.train(HYPERPARAMS_SETTING, PROCESSED_DATASET_PATH, MODEL_DIR, LOG_WANDB, IS_SMOL)
+    model_path = training.train(HYPERPARAMS_SETTING, PROCESSED_DATASET_PATH, MODEL_OUT, LOG_WANDB, IS_SMOL)
     print(f"Training complete. Check {model_path} for results.")
 
 if __name__ == "__main__":

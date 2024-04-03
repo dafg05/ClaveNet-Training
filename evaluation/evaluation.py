@@ -5,10 +5,11 @@ import pickle
 from datetime import datetime
 from pathlib import Path
 
-from training.grooveTransformer import GrooveTransformer as GT
+from ..training.grooveTransformer import GrooveTransformer as GT
+from .evalDatasets import *
+from .constants import *
+
 import grooveEvaluator.relativeComparison as rc
-from evaluation.evalDatasets import *
-from evaluation.constants import *
 
 def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, synthesize_up_to: int=0):
     """

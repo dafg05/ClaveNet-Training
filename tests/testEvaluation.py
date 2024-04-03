@@ -1,10 +1,11 @@
-import evaluation.evaluation as eval
+from ..evaluation import evaluation as eval
+from .constants import MODEL_PATH, TEST_DATA_DIR, VALIDATION_SET_PATH
 
 from pathlib import Path
 
-OUT_DIR = Path('tests','evaluation_out')
-MODEL_PATH = Path('tests','smol_solar-shadow_1711138656.pth')
-VALIDATION_SET_PATH = Path('tests','AfroCuban_Validation_PreProcessed_On_03_04_2024_at_01_04_hrs')
+# relevant paths
+OUT_DIR = TEST_DATA_DIR / 'evaluation_out'
+
 SYNTHESIZE_UP_TO = 5
 
 def test_evaluate_model():
