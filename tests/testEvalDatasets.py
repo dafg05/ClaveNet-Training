@@ -17,6 +17,7 @@ SUBSET_SIZE = 4
 
 def testEvalDatasets():
     validation_set = ValidationHvoDataset(VALIDATION_SET_PATH)
+    print(f"Validation set length: {len(validation_set)}")
     
     # check if validation set is valid
     for i in range(len(validation_set)):
