@@ -15,7 +15,7 @@ import grooveEvaluator.relativeComparison as rc
 
 NUM_POINTS = 10000
 
-def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, synthesize_up_to: int=0):
+def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, num_points: int=NUM_POINTS, synthesize_up_to: int=0):
     """
     Evaluate the model on a validation data set. Returns the evaluation time for bookkeeping purposes
     """
@@ -30,11 +30,11 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, sy
     assert synthesize_up_to <= len(validation_set)
     
     # Perform relative comparison
-    comparison_result_by_feat = rc.relative_comparison(generated_set, validation_set, num_points=NUM_POINTS, padding_factor=2)
+    comparison_result_by_feat = rc.relative_comparison(generated_set, validation_set, num_points=num_points, padding_factor=2)
 
     # Create a directory to store the evaluation results
     evaluation_time = int(datetime.now().timestamp())
-    evaluation_dir = Path(out_dir) / f'evaluation_{evaluation_time}'
+    evaluation_dir = Path(out_dir) / f'evaluation_{evaluation_time}_{model_path.stem}'
     evaluation_dir.mkdir(parents=True, exist_ok=True)
 
     # Synthesize reference audio files
