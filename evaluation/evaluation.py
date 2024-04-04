@@ -1,15 +1,19 @@
 import torch
-import sys
 import json
 import pickle
+import pandas as pd
+
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 from ..training.grooveTransformer import GrooveTransformer as GT
 from .evalDatasets import *
 from .constants import *
 
 import grooveEvaluator.relativeComparison as rc
+
+NUM_POINTS = 10000
 
 def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, synthesize_up_to: int=0):
     """
@@ -26,7 +30,7 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, sy
     assert synthesize_up_to <= len(validation_set)
     
     # Perform relative comparison
-    comparison_result_by_feat = rc.relative_comparison(generated_set, validation_set)
+    comparison_result_by_feat = rc.relative_comparison(generated_set, validation_set, num_points=NUM_POINTS, padding_factor=2)
 
     # Create a directory to store the evaluation results
     evaluation_time = int(datetime.now().timestamp())
@@ -46,7 +50,10 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, sy
         print(f"Saved {synthesize_up_to} sets of audio files to {audio_dir}")
 
     # Save the relative comparison results
-    results_path = evaluation_dir / 'results'
+    csv_path = evaluation_dir / 'results.csv'
+    results_dict_to_csv(comparison_result_by_feat, csv_path)
+
+    results_path = evaluation_dir / 'results.pkl'
     pickle.dump(comparison_result_by_feat, open(results_path, 'wb'))
 
     return evaluation_dir
@@ -74,11 +81,25 @@ def loadModel(model_path: Path) -> GT:
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     return model
 
+def results_dict_to_csv(results_dict: Dict[str, rc.ComparisonResult], csv_file_path: Path):
+    data = {
+        'feature' : [],
+        'kl_divergence' : [],
+        'overlapping_area' : [],
+        'min_point' : [],
+        'max_point' : [],
+        'num_points' : []
+    }
 
-def usage_and_exit():
-    print("Usage: python evaluation.py <modelStartTime> <hypersFile> <synthesize_up_to> <eval_set_size>")
-    print("modelStartTime: used to id the model")
-    print("hypersFile: json file containing hyperparameters")
-    print("synthesize_up_to: number of audiofiles that will be synthesized")
-    print("eval_set_size: len of eval set (a subset of validation set)")
-    sys.exit(1)
+    for feature, cr in results_dict.items():
+        data['feature'].append(feature)
+        data['kl_divergence'].append(cr.kl_divergence)
+        data['overlapping_area'].append(cr.overlapping_area)
+        data['min_point'].append(cr.points[0])
+        data['max_point'].append(cr.points[-1])
+        data['num_points'].append(len(cr.points))
+
+    df = pd.DataFrame(data)
+    df.to_csv(csv_file_path, index=False)
+
+    print(f"Saved results to {csv_file_path}")

@@ -1,8 +1,6 @@
 import numpy as np
 import pickle
 import os
-import mido
-import sys
 import shutil
 
 from .constants import *
