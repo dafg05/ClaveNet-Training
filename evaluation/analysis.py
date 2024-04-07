@@ -8,14 +8,9 @@ from grooveEvaluator.constants import *
 TRAIN_RUNS_DIR = Path("train_runs")
 ORIGIN_VECTOR = np.array([0, 1]) # [kl_divergence, overlapping_area]
 
-# The "Complete Eval Features" exclude the timing accuracy, as it is cannot be computed for some models
-COMPLETE_EVAL_FEATURES = EVAL_FEATURES.copy()
-COMPLETE_EVAL_FEATURES.remove(TIMING_ACCURACY_KEY)
-
 REDUCED_EVAL_FEATURES = EVAL_FEATURES.copy()
 REDUCED_EVAL_FEATURES.remove(VEL_SIMILARITY_SCORE_KEY)
 REDUCED_EVAL_FEATURES.remove(LAIDBACKNESS_KEY)
-REDUCED_EVAL_FEATURES.remove(TIMING_ACCURACY_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_SKEW_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_MAX_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_CENTROID_KEY)
@@ -67,7 +62,7 @@ def get_min_loss_entries(losses_dict, n):
     return dict(min_loss_entries)
 
 def get_validation_loss(eval_run_path, positive_kld=True, reduced_features=False):
-    features = REDUCED_EVAL_FEATURES if reduced_features else COMPLETE_EVAL_FEATURES
+    features = REDUCED_EVAL_FEATURES if reduced_features else EVAL_FEATURES
 
     eval_results = pd.read_csv(eval_run_path / "results.csv", index_col="feature")
     validation_loss = 0
