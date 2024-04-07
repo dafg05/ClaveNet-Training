@@ -45,6 +45,7 @@ def analysis(eval_runs_paths: List[Path], report_path: Path, n: int,reduced_feat
         analysis_data["num_transformations"].append(num_transformations)
         analysis_data["num_replacements"].append(num_replacements)
         analysis_data["out_of_style_prob"].append(out_of_style_prob)
+        analysis_data["eval_path"].append(str(eval_run_path))
     
     return analysis_data
 
