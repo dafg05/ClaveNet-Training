@@ -3,14 +3,30 @@ from typing import List
 import pandas as pd
 import numpy as np
 
+from grooveEvaluator.constants import *
+
 TRAIN_RUNS_DIR = Path("train_runs")
 ORIGIN_VECTOR = np.array([0, 1]) # [kl_divergence, overlapping_area]
 
-def analysis(eval_runs_paths: List[Path], report_path: Path, n: int):
-    best_models_dict = get_best_models(eval_runs_paths, n)
+# The "Complete Eval Features" exclude the timing accuracy, as it is cannot be computed for some models
+COMPLETE_EVAL_FEATURES = EVAL_FEATURES.copy()
+COMPLETE_EVAL_FEATURES.remove(TIMING_ACCURACY_KEY)
+
+REDUCED_EVAL_FEATURES = EVAL_FEATURES.copy()
+REDUCED_EVAL_FEATURES.remove(VEL_SIMILARITY_SCORE_KEY)
+REDUCED_EVAL_FEATURES.remove(LAIDBACKNESS_KEY)
+REDUCED_EVAL_FEATURES.remove(TIMING_ACCURACY_KEY)
+REDUCED_EVAL_FEATURES.remove(AUTO_CORR_SKEW_KEY)
+REDUCED_EVAL_FEATURES.remove(AUTO_CORR_MAX_KEY)
+REDUCED_EVAL_FEATURES.remove(AUTO_CORR_CENTROID_KEY)
+REDUCED_EVAL_FEATURES.remove(AUTO_CORR_HARMONICITY_KEY)
+
+def analysis(eval_runs_paths: List[Path], report_path: Path, n: int, reduced_features: bool = False):
+    best_models_dict = get_best_models(eval_runs_paths, n, reduced_features)
     analysis_data = {
         "model_name": [],
         "validation_loss": [],
+        "reduced_features": [],
         "num_transformations": [],
         "num_replacements": [],
         "out_of_style_prob": [],
@@ -22,6 +38,7 @@ def analysis(eval_runs_paths: List[Path], report_path: Path, n: int):
         model_name = get_model_name_from_eval_run(eval_run_path)
         analysis_data["model_name"].append(model_name)
         analysis_data["validation_loss"].append(best_models_dict[eval_run_path])
+        analysis_data["reduced_features"].append(reduced_features)
 
         training_start_time = int(model_name.split("_")[-1])
         num_transformations = report_df.loc[training_start_time, "num_transformations"]
@@ -34,10 +51,10 @@ def analysis(eval_runs_paths: List[Path], report_path: Path, n: int):
     
     return analysis_data
 
-def get_best_models(eval_runs_paths, n):
+def get_best_models(eval_runs_paths, n, reduced_features=False):
     model_validation_losses = {}
     for eval_run_path in eval_runs_paths:
-        model_score = get_validation_loss(eval_run_path)
+        model_score = get_validation_loss(eval_run_path, reduced_features=reduced_features)
         model_validation_losses[eval_run_path] = model_score
     return get_min_loss_entries(model_validation_losses, n)
     
@@ -47,11 +64,16 @@ def get_min_loss_entries(losses_dict, n):
     # Convert the sorted list of tuples back to a dictionary
     return dict(min_loss_entries)
 
-def get_validation_loss(eval_run_path, positive_kld=True):
+def get_validation_loss(eval_run_path, positive_kld=True, reduced_features=False):
+    features = REDUCED_EVAL_FEATURES if reduced_features else COMPLETE_EVAL_FEATURES
+
     eval_results = pd.read_csv(eval_run_path / "results.csv", index_col="feature")
     validation_loss = 0
     # iterate over the rows of the dataframe
     for _, row in eval_results.iterrows():
+        if row.name not in features:
+            continue
+
         # our metrics vector is going to be [kl_divergence, overlapping_area]
         # retrieve these vales from the dataframe
         metrics_vector = np.array([row["kl_divergence"], row["overlapping_area"]])
@@ -69,3 +91,7 @@ def get_model_name_from_eval_run(eval_run_path):
     run_name = eval_run_path.stem
 
     return "_".join(run_name.split("_")[2:])
+
+if __name__ == "__main__":
+    print(COMPLETE_EVAL_FEATURES)
+    print(REDUCED_EVAL_FEATURES)
