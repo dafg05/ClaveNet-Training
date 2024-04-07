@@ -34,7 +34,7 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, nu
 
     # Create a directory to store the evaluation results
     evaluation_time = int(datetime.now().timestamp())
-    evaluation_dir = Path(out_dir) / f'evaluation_{evaluation_time}_{model_path.stem}'
+    evaluation_dir = Path(out_dir) / f'{model_path.stem}_evaluation_{evaluation_time}'
     evaluation_dir.mkdir(parents=True, exist_ok=True)
 
     # Synthesize reference audio files
