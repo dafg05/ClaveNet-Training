@@ -21,8 +21,10 @@ REDUCED_EVAL_FEATURES.remove(AUTO_CORR_MAX_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_CENTROID_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_HARMONICITY_KEY)
 
-def analysis(eval_runs_paths: List[Path], report_path: Path, n: int, reduced_features: bool = False):
+def analysis(eval_runs_paths: List[Path], report_path: Path, n: int,reduced_features: bool = False, baseline_path: Path=None):
     best_models_dict = get_best_models(eval_runs_paths, n, reduced_features)
+    if baseline_path:
+        best_models_dict[baseline_path] = get_validation_loss(baseline_path, reduced_features=reduced_features)
     analysis_data = {
         "model_name": [],
         "validation_loss": [],
