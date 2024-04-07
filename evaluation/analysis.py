@@ -27,6 +27,7 @@ def analysis(eval_runs_paths: List[Path], report_path: Path, n: int,reduced_feat
         "num_transformations": [],
         "num_replacements": [],
         "out_of_style_prob": [],
+        "eval_path" : []
     }
 
     report_df = pd.read_csv(report_path, index_col="training_start_time")
