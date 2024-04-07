@@ -87,7 +87,7 @@ def get_model_name_from_eval_run(eval_run_path):
     # TEST ME FIRST
     run_name = eval_run_path.stem
 
-    return "_".join(run_name.split("_")[2:])
+    return "_".join(run_name.split("_")[:3])
 
 if __name__ == "__main__":
     print(REDUCED_EVAL_FEATURES)
