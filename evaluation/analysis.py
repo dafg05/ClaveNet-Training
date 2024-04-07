@@ -90,5 +90,4 @@ def get_model_name_from_eval_run(eval_run_path):
     return "_".join(run_name.split("_")[2:])
 
 if __name__ == "__main__":
-    print(COMPLETE_EVAL_FEATURES)
     print(REDUCED_EVAL_FEATURES)
