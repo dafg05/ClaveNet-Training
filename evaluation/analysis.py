@@ -47,7 +47,7 @@ def get_min_loss_entries(losses_dict, n):
     # Convert the sorted list of tuples back to a dictionary
     return dict(min_loss_entries)
 
-def get_validation_loss(eval_run_path):
+def get_validation_loss(eval_run_path, positive_kld=True):
     eval_results = pd.read_csv(eval_run_path / "results.csv", index_col="feature")
     validation_loss = 0
     # iterate over the rows of the dataframe
@@ -55,6 +55,9 @@ def get_validation_loss(eval_run_path):
         # our metrics vector is going to be [kl_divergence, overlapping_area]
         # retrieve these vales from the dataframe
         metrics_vector = np.array([row["kl_divergence"], row["overlapping_area"]])
+        if positive_kld and metrics_vector[0] < 0:
+            # if we want to consider only positive kl_divergence values, set negative values to 0
+            metrics_vector[0] = 0
         # calculate the euclidean distance between the metrics vector and the origin vector
         distance = np.linalg.norm(metrics_vector - ORIGIN_VECTOR)
         # add the distance to the validation loss
