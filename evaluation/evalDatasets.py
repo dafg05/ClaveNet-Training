@@ -16,12 +16,14 @@ class ValidationHvoDataset(Dataset):
     Based on: https://github.com/behzadhaki/GrooveEvaluator/blob/main/test/feature_extractor_test.py
     """
 
-    def __init__(self, source_dir, metadata_csv='metadata.csv', hvo_pickle='hvo_sequence_data.obj',max_len=32):
-        data_file = open(os.path.join(source_dir, hvo_pickle), 'rb')
-        dataset = pickle.load(data_file)
-
-        metadata = pd.read_csv(os.path.join(source_dir, metadata_csv))
-        self.hvo_sequences = self.__populate_hvo_sequences(dataset, metadata, max_len)
+    def __init__(self, source_dir, metadata_csv='metadata.csv', hvo_pickle='hvo_sequence_data.obj', max_len=32, subset=None):
+        if subset:
+            self.hvo_sequences = subset
+        else:
+            data_file = open(os.path.join(source_dir, hvo_pickle), 'rb')
+            dataset = pickle.load(data_file)
+            metadata = pd.read_csv(os.path.join(source_dir, metadata_csv))
+            self.hvo_sequences = self.__populate_hvo_sequences(dataset, metadata, max_len)
 
     def __len__(self):
         return len(self.hvo_sequences)

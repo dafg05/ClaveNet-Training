@@ -5,7 +5,7 @@ import pandas as pd
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from ..training.grooveTransformer import GrooveTransformer as GT
 from .evalDatasets import *
@@ -80,6 +80,19 @@ def loadModel(model_path: Path) -> GT:
     model = GT(d_model=d_model, nhead = n_heads, num_layers=n_layers, dim_feedforward=dim_forward, dropout=dropout, voices=9)
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     return model
+
+def audioEval(out_dir: Path, model_path: Path, full_validation_set: ValidationHvoDataset, selected_indices: List[int]):
+    subset = [full_validation_set[ix] for ix in selected_indices]
+    model = loadModel(model_path)
+
+    validation_subset = ValidationHvoDataset(None, subset=subset)
+    monotonic_subset = MonotonicHvoDataset(validation_subset)
+    generated_subset = GeneratedHvoDataset(monotonic_subset, model)
+
+    for i in range(len(validation_subset)):
+        validation_subset[i].save_audio(f'{out_dir}/sample{i}_validation.wav', sf_path=SF_PATH)
+        monotonic_subset[i].save_audio(f'{out_dir}/sample{i}_monotonic.wav', sf_path=SF_PATH)
+        generated_subset[i].save_audio(f'{out_dir}/sample{i}_generated.wav', sf_path=SF_PATH)
 
 def results_dict_to_csv(results_dict: Dict[str, rc.ComparisonResult], csv_file_path: Path):
     data = {
