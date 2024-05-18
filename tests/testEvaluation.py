@@ -7,10 +7,13 @@ from pathlib import Path
 OUT_DIR = TEST_DATA_DIR / 'evaluation_out'
 INDICES = [3, 5, 9]
 
-SYNTHESIZE_UP_TO = 5
 
 def test_evaluate_model():
-    eval_time = eval.evaluateModel(OUT_DIR, MODEL_PATH, VALIDATION_SET_PATH, SYNTHESIZE_UP_TO)
+    eval_time = eval.evaluateModel(OUT_DIR, MODEL_PATH, VALIDATION_SET_PATH, num_points=500)
+    print(f"Output evaluation saved to {OUT_DIR}. Evaltime: {eval_time}")
+
+def test_simple_evaluate_model():
+    eval_time = eval.evaluateModel(OUT_DIR, MODEL_PATH, VALIDATION_SET_PATH, simple=True, num_points=500)
     print(f"Output evaluation saved to {OUT_DIR}. Evaltime: {eval_time}")
 
 def test_audio_eval():
@@ -23,4 +26,5 @@ def test_audio_eval():
 
 if __name__ == "__main__":
     test_evaluate_model()
+    test_simple_evaluate_model()
     test_audio_eval()
