@@ -55,11 +55,20 @@ def test_analysis_reduced_features():
     analysis_df.to_csv(OUT_DIR / "analysis_reduced_features.csv")
     print(f"Reduced Analysis data written to csv file at {OUT_DIR / 'analysis_reduced_features.csv'}")
 
+def test_analysis_all_models():
+    analysis_data = analysis.analysis(EVAL_RUN_PATHS, REPORT_PATH, reduced_features=True)
+    analysis_df = pd.DataFrame(analysis_data)
+    assert analysis_df.shape[0] == len(EVAL_RUN_PATHS), f"Expected {len(EVAL_RUN_PATHS)} rows, got {analysis_df.shape[0]}"
+    # write the dataframe to a csv file
+    analysis_df.to_csv(OUT_DIR / "analysis_all_models.csv")
+    print(f"Analysis data for all models written to csv file at {OUT_DIR / 'analysis_all_models.csv'}")
+
 if __name__ == "__main__":
     test_get_min_loss_entries()
     test_get_model_name_from_eval_run()
     test_analysis()
     test_analysis_reduced_features()
+    test_analysis_all_models()
     
     
     

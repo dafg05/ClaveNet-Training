@@ -16,8 +16,13 @@ REDUCED_EVAL_FEATURES.remove(AUTO_CORR_MAX_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_CENTROID_KEY)
 REDUCED_EVAL_FEATURES.remove(AUTO_CORR_HARMONICITY_KEY)
 
-def analysis(eval_runs_paths: List[Path], report_path: Path, n: int,reduced_features: bool = False, baseline_path: Path=None):
-    best_models_dict = get_best_models(eval_runs_paths, n, reduced_features)
+def analysis(eval_runs_paths: List[Path], report_path: Path, num_models: int = -1, reduced_features: bool = False, baseline_path: Path=None):
+    '''
+    If num_models is -1, all models will be considered for the analysis. Otherwise, only the top n models will be considered.
+    '''
+    if num_models == -1:
+        num_models = len(eval_runs_paths)
+    best_models_dict = get_best_models(eval_runs_paths, num_models, reduced_features)
     if baseline_path:
         best_models_dict[baseline_path] = get_validation_loss(baseline_path, reduced_features=reduced_features)
     analysis_data = {
