@@ -39,6 +39,7 @@ def evaluateModel(out_dir: Path, model_path: Path, validation_set_path: Path, si
     csv_path = evaluation_dir / 'results.csv'
     if simple:
         simple_results_dict_to_csv(comparison_result_by_feat, csv_path)
+        pickle.dump(comparison_result_by_feat, open(evaluation_dir / 'results.pkl', 'wb'))
 
     else:
         results_dict_to_csv(comparison_result_by_feat, csv_path)
@@ -88,7 +89,7 @@ def audioEval(out_dir: Path, model_path: Path, full_validation_set: ValidationHv
 def simple_results_dict_to_csv(results_dict: Dict[str, rc.SimpleComparisonResult], csv_file_path: Path):
     """
     Although this function is named simple_results_dict_to_csv, it actually saves more information than 'results_dict_to_csv'.
-    This is because in the non-simple case, we pickle the kde_dict, while in the simple case we can just save the mean and std without pickling.
+    This is for convenience sake, as it's useful to have the mean and std of the intraset and interset distances directly on the csv file.
     """
     data = {
         'feature' : [],
