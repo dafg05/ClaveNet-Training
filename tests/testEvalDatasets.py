@@ -1,11 +1,11 @@
 import torch
-from pathlib import Path
 from hvo_sequence.hvo_seq import HVO_Sequence
 
-from ..evaluation.evalDatasets import ValidationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
-from ..evaluation.constants import SF_PATH
-from ..training.grooveTransformer import GrooveTransformer
-from .constants import TEST_DATA_DIR, MODEL_PATH, VALIDATION_SET_PATH
+from evaluation.evalDatasets import ValidationHvoDataset, MonotonicHvoDataset, GeneratedHvoDataset
+from evaluation.constants import SF_PATH
+from tests.constants import TEST_DATA_DIR, MODEL_PATH, VALIDATION_SET_PATH
+
+from cnarch.grooveTransformer import GrooveTransformer
 
 AUDIO_OUT_DIR = TEST_DATA_DIR / 'datasets_out'
 

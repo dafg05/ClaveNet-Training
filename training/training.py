@@ -4,9 +4,9 @@ import json
 import pickle
 import numpy as np
 
-from .hvoLoss import HVO_Loss, getHitAccuracy
-from .hvoPairsDataset import HvoPairsDataset
-from .grooveTransformer import GrooveTransformer
+from cnarch.hvoLoss import HVO_Loss, getHitAccuracy
+from cnarch.hvoPairsDataset import HvoPairsDataset
+from cnarch.grooveTransformer import GrooveTransformer
 from .constants import *
 
 from torch.utils.data import DataLoader
@@ -276,3 +276,6 @@ def train(hyperparams_setting: str, processed_dataset_path: Path, out_model_dir:
         wandb.finish()
 
     return model_path
+
+if __name__ == "__main__":
+    print("This is training.py")

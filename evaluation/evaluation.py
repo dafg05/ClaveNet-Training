@@ -7,9 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from ..training.grooveTransformer import GrooveTransformer as GT
-from .evalDatasets import *
-from .constants import *
+from cnarch.grooveTransformer import GrooveTransformer as GT
+
+from evaluation.evalDatasets import *
+from evaluation.constants import *
 
 import grooveEvaluator.relativeComparison as rc
 

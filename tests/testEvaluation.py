@@ -1,8 +1,6 @@
-from ..evaluation import evaluation as eval
-from ..evaluation import evalDatasets
-from .constants import MODEL_PATH, TEST_DATA_DIR, VALIDATION_SET_PATH
-
-from pathlib import Path
+from evaluation import evaluation as eval
+from evaluation import evalDatasets
+from tests.constants import MODEL_PATH, TEST_DATA_DIR, VALIDATION_SET_PATH
 
 OUT_DIR = TEST_DATA_DIR / 'evaluation_out'
 INDICES = [3, 5, 9]

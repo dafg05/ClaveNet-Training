@@ -1,5 +1,4 @@
-from ..training import process
-from pathlib import Path
+from training import process
 
 from .constants import TEST_DATA_DIR, PREPROCESSED_DATASET_PATH
 

@@ -1,10 +1,8 @@
-from pathlib import Path
 import pandas as pd
 
-from .constants import TEST_DATA_DIR
+from tests.constants import TEST_DATA_DIR
 
-# from ..evaluation import analysis
-from ..evaluation import analysis
+from evaluation import analysis
 
 EVAL_RUN_PATH_1 = TEST_DATA_DIR / "eval_runs" / "full_solar-shadow_1711253355_evaluation_1712200441"
 EVAL_RUN_PATH_2 = TEST_DATA_DIR / "eval_runs" / "full_solar-shadow_1711265770_evaluation_1712202255"
