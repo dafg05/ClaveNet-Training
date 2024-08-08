@@ -3,22 +3,7 @@
 __pycache__
 .vscode
 wandb
-learningVenv
 venv
-models/*
-processedData/*
-out/*
-midi/inferred/*
-midi/monotonic/*
-midi/source/*
-preprocessedDatasets/*
-processedDatasets/*
-evalResults/*
 
-testData/PreProcessed_On_21_03_2024_at_17_38_hrs
-testData/processed_out
-testData/datasets_out
-testData/model_out
-testData/processed_at_1711223657/
-testData/evaluation_out
-testData/analysis_out
+tests/out/model/*
+tests/out/processed/*
