@@ -1,0 +1,10 @@
+{
+    "random_seed": 42,
+    "seed_examples_sets": [
+        "23set",
+        "32set"
+    ],
+    "num_transformations": 0,
+    "num_replacements": 1,
+    "out_of_style_prob": 0.2
+}

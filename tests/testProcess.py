@@ -1,8 +1,8 @@
 from training import process
 
-from .constants import TEST_DATA_DIR, PREPROCESSED_DATASET_PATH
+from .constants import TEST_OUT_DIR, PREPROCESSED_DATASET_PATH
 
-PROCESSED_DIR = TEST_DATA_DIR / 'processed_out'
+PROCESSED_DIR = TEST_OUT_DIR / 'processed'
 
 def testProcessing():
     # Clear the processed directory first
