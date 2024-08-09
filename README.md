@@ -1,4 +1,4 @@
-# learning
+# ClaveNet-Training
 
 ## Requirements
 

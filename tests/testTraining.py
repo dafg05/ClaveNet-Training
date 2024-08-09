@@ -1,8 +1,7 @@
-from ..training import training
-from .constants import TEST_DATA_DIR, PROCESSED_DATASET_PATH
-from pathlib import Path
+from training import training
+from tests.constants import TEST_OUT_DIR, PROCESSED_DATASET_PATH
 
-MODEL_OUT = TEST_DATA_DIR / 'model_out'
+MODEL_OUT = TEST_OUT_DIR / 'model'
 
 HYPERPARAMS_SETTING = 'solar-shadow'
 LOG_WANDB = False
