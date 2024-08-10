@@ -14,11 +14,11 @@ As a prerequisite for training, preprocessed datasets must be processed. The `tr
 
 ### Arguments
 
-## Preprocessed dataset
+#### Preprocessed dataset
 
 Provide a path to a preprocessed dataset. See the [preprocessing repo](https://github.com/dafg05/ClaveNet-Preprocessing) for more info.
 
-## Out processed dataset dir
+#### Out processed dataset dir
 
 Provide a path where output processed datasets will be written to.
 
