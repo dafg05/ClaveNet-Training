@@ -10,7 +10,7 @@ PREPROC_DATASETS_DIR = Path('preproc_datasets')
 TRAINING_RUNS_DIR = Path('batch_runs')
 TRAINING_ERROR_LOGS = 'train_errors.log'
 HYPERPARAMS_SETTING = 'solar-shadow'
-LOG_WANDB = True
+LOG_WANDB = False
 IS_SMOL = True
 
 def train_pipeline(preprocessed_datasets_paths):
