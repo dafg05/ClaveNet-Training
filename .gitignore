@@ -7,3 +7,5 @@ venv
 
 tests/out/model/*
 tests/out/processed/*
+
+preproc_datasets

@@ -7,8 +7,7 @@ from tqdm import tqdm
 from training import process, training
 
 PREPROC_DATASETS_DIR = Path('preproc_datasets')
-TRAINING_RUNS_DIR = Path('train_runs')
-TRAINING_OUT = Path('train_out')
+TRAINING_RUNS_DIR = Path('batch_runs')
 TRAINING_ERROR_LOGS = 'train_errors.log'
 HYPERPARAMS_SETTING = 'solar-shadow'
 LOG_WANDB = True
@@ -53,5 +52,3 @@ def get_preprocessed_datasets_paths(datasets_dir: Path):
 if __name__ == '__main__':
     preprocessed_datasets_paths = get_preprocessed_datasets_paths(PREPROC_DATASETS_DIR)
     train_pipeline(preprocessed_datasets_paths)
-
-    
